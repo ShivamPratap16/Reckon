@@ -70,8 +70,9 @@ class LedgerConcurrencyTest : PostgresTestBase() {
         assertEquals(repo.sumEntries(b), balanceB, "ledger entries for b don't match balance (orphaned entries?)")
 
         // Exactly 2 entries per successful transfer — no orphaned entries from failed attempts
-        val totalEntries = jdbc.queryForObject("SELECT COUNT(*) FROM ledger_entries", Long::class.java)!!
-        assertEquals(2L * successCount, totalEntries, "orphaned ledger entries found")
+        val entriesForTheseAccounts = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM ledger_entries WHERE account_id IN (?, ?)", Long::class.java, a, b)!!
+        assertEquals(2L * successCount, entriesForTheseAccounts, "orphaned ledger entries found")
 
         // Every transfer that committed should be counted as ok (no unexpected errors)
         val committedCount = (movedAmount / 100).toInt()
