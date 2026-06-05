@@ -11,10 +11,19 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       acks: all
+    consumer:
+      group-id: reckon
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 reckon:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-must-be-at-least-256-bits-long-xxxxx}
     ttl-minutes: 60
+  consumers:
+    enabled: true
+  rewards:
+    cashback-bps: 100
   outbox:
     topic: payment-events
     scheduler:
