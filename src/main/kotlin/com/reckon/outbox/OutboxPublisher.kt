@@ -35,7 +35,9 @@ class OutboxPublisher(
 
     /** Wrap the stored payload with the authoritative event_id (consumer dedup key in Plan 4). */
     private fun envelope(row: OutboxRow): String =
-        row.payload.replaceFirst("\"eventId\":null", "\"eventId\":\"${row.eventId}\"")
+        row.payload
+            .replaceFirst("\"eventId\": null", "\"eventId\": \"${row.eventId}\"")
+            .replaceFirst("\"eventId\":null", "\"eventId\":\"${row.eventId}\"")
 
     @Scheduled(fixedDelayString = "\${reckon.outbox.poll-ms:1000}")
     fun scheduledPublish() {
