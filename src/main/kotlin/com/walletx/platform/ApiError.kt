@@ -14,4 +14,11 @@ class GlobalExceptionHandler {
     @ExceptionHandler(ApiException::class)
     fun handle(e: ApiException): ResponseEntity<ApiErrorBody> =
         ResponseEntity.status(e.status).body(ApiErrorBody(e.code, e.message ?: e.code))
+
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException::class)
+    fun handleValidation(e: org.springframework.web.bind.MethodArgumentNotValidException): ResponseEntity<ApiErrorBody> {
+        val msg = e.bindingResult.fieldErrors.joinToString("; ") { "${it.field}: ${it.defaultMessage}" }
+        return ResponseEntity.status(org.springframework.http.HttpStatus.BAD_REQUEST)
+            .body(ApiErrorBody("VALIDATION_ERROR", msg.ifBlank { "validation failed" }))
+    }
 }
