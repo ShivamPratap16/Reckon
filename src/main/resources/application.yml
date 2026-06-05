@@ -5,7 +5,18 @@ spring:
     password: ${DB_PASSWORD:reckon}
   flyway:
     enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
 reckon:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-must-be-at-least-256-bits-long-xxxxx}
     ttl-minutes: 60
+  outbox:
+    topic: payment-events
+    scheduler:
+      enabled: true
+    batch-size: 100
