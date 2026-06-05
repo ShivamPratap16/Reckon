@@ -46,7 +46,7 @@ class LedgerRepository(private val jdbc: JdbcTemplate) {
 
     fun findByInitiatorAndKey(initiatorId: UUID, idempotencyKey: String): ExistingTxn? =
         jdbc.query(
-            """SELECT id, status, request_hash, response_code, response_body
+            """SELECT id, status, request_hash, response_code, response_body, failure_reason
                FROM transactions WHERE initiator_id = ? AND idempotency_key = ?""",
             { rs, _ -> ExistingTxn(
                 rs.getObject("id", UUID::class.java),
@@ -54,6 +54,7 @@ class LedgerRepository(private val jdbc: JdbcTemplate) {
                 rs.getString("request_hash"),
                 rs.getObject("response_code") as Int?,
                 rs.getString("response_body"),
+                rs.getString("failure_reason"),
             ) },
             initiatorId, idempotencyKey,
         ).firstOrNull()
@@ -72,4 +73,5 @@ data class ExistingTxn(
     val requestHash: String,
     val responseCode: Int?,
     val responseBody: String?,
+    val failureReason: String?,
 )

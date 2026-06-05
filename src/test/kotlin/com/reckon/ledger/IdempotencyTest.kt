@@ -65,6 +65,35 @@ class IdempotencyTest : PostgresTestBase() {
         assertEquals(100, fixtures.balanceOf(a))                    // still untouched
     }
 
+    @Test fun `concurrent identical requests execute exactly once`() {
+        val a = fixtures.walletWith(50000); val b = fixtures.walletWith(0)
+        val initiator = java.util.UUID.randomUUID()
+        val hash = com.reckon.platform.RequestHash.of("P2P", a, b, 20000)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
+        val fresh = java.util.concurrent.atomic.AtomicInteger(0)
+        val replayed = java.util.concurrent.atomic.AtomicInteger(0)
+        val conflicts = java.util.concurrent.atomic.AtomicInteger(0)
+        val unexpected = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+        val tasks = (1..20).map {
+            Runnable {
+                try {
+                    val o = ledger.recordTransfer(TxnType.P2P, "race-key", hash, initiator, a, b, 20000)
+                    if (o.replayed) replayed.incrementAndGet() else fresh.incrementAndGet()
+                } catch (e: ApiException) {
+                    if (e.code == "IN_PROGRESS") conflicts.incrementAndGet() else unexpected.add(e.code)
+                } catch (e: Exception) { unexpected.add(e.javaClass.simpleName) }
+            }
+        }
+        tasks.forEach { pool.submit(it) }
+        pool.shutdown(); pool.awaitTermination(60, java.util.concurrent.TimeUnit.SECONDS)
+
+        kotlin.test.assertTrue(unexpected.isEmpty(), "unexpected outcomes: $unexpected")
+        kotlin.test.assertEquals(1, fresh.get(), "exactly one request should execute fresh")
+        kotlin.test.assertEquals(19, replayed.get() + conflicts.get(), "all others replay or 409")
+        kotlin.test.assertEquals(30000L, fixtures.balanceOf(a))   // debited EXACTLY once
+        kotlin.test.assertEquals(20000L, fixtures.balanceOf(b))
+    }
+
     @Test fun `different initiators may reuse the same key independently`() {
         val a = fixtures.walletWith(50000); val b = fixtures.walletWith(0)
         val c = fixtures.walletWith(50000)

@@ -54,13 +54,11 @@ class LedgerService(
         return when (existing.status) {
             "COMPLETED" -> TransferOutcome(existing.id, "COMPLETED", replayed = true)
             "FAILED"    -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
-                              existing.responseBody?.let { extractCode(it) } ?: "FAILED",
+                              existing.failureReason ?: "FAILED",
                               "replayed prior failure")
             else        -> throw ApiException(HttpStatus.CONFLICT, "IN_PROGRESS",
                               "original request still in progress") // PENDING
         }
     }
 
-    private fun extractCode(body: String): String =
-        Regex("\"code\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: "FAILED"
 }
