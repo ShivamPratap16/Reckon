@@ -54,6 +54,20 @@ class LedgerServiceTest : PostgresTestBase() {
         assertEquals(0, fixtures.balanceOf(b))
     }
 
+    @Test fun `failed transfer writes no ledger entries`() {
+        val a = fixtures.walletWith(100); val b = fixtures.walletWith(0)
+        val idem = "no-entries-${java.util.UUID.randomUUID()}"
+        org.junit.jupiter.api.assertThrows<com.walletx.platform.ApiException> {
+            ledger.recordTransfer(TxnType.P2P, idem, "h", java.util.UUID.randomUUID(), a, b, 99999)
+        }
+        val entryCount = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM ledger_entries le JOIN transactions t ON t.id = le.transaction_id WHERE t.idempotency_key = ?",
+            Long::class.java, idem)
+        kotlin.test.assertEquals(0L, entryCount)
+        val status = jdbc.queryForObject("SELECT status FROM transactions WHERE idempotency_key = ?", String::class.java, idem)
+        kotlin.test.assertEquals("FAILED", status)
+    }
+
     @Test fun `total system balance is conserved by a transfer`() {
         val before = jdbc.queryForObject("SELECT SUM(balance) FROM accounts", Long::class.java)!!
         val a = fixtures.walletWith(50000); val b = fixtures.walletWith(0)

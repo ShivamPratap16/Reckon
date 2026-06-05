@@ -22,6 +22,9 @@ abstract class PostgresTestBase {
             r.add("spring.datasource.url", pg::getJdbcUrl)
             r.add("spring.datasource.username", pg::getUsername)
             r.add("spring.datasource.password", pg::getPassword)
+            // Increase pool so concurrency tests don't starve under 16-thread load
+            r.add("spring.datasource.hikari.maximum-pool-size") { "20" }
+            r.add("spring.datasource.hikari.connection-timeout") { "10000" }
         }
     }
 }
