@@ -32,6 +32,10 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:postgresql:1.20.4")
     testImplementation("org.testcontainers:junit-jupiter:1.20.4")
+
+    implementation("org.springframework.kafka:spring-kafka")
+    testImplementation("org.testcontainers:kafka:1.20.4")
+    testImplementation("org.springframework.kafka:spring-kafka-test")
 }
 
 ext["testcontainers.version"] = "1.20.4"
