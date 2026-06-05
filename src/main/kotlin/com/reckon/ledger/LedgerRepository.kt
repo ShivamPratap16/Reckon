@@ -43,4 +43,33 @@ class LedgerRepository(private val jdbc: JdbcTemplate) {
     fun status(txnId: UUID): TxnStatus = TxnStatus.valueOf(
         jdbc.queryForObject("SELECT status FROM transactions WHERE id=?", String::class.java, txnId)!!
     )
+
+    fun findByInitiatorAndKey(initiatorId: UUID, idempotencyKey: String): ExistingTxn? =
+        jdbc.query(
+            """SELECT id, status, request_hash, response_code, response_body
+               FROM transactions WHERE initiator_id = ? AND idempotency_key = ?""",
+            { rs, _ -> ExistingTxn(
+                rs.getObject("id", UUID::class.java),
+                rs.getString("status"),
+                rs.getString("request_hash"),
+                rs.getObject("response_code") as Int?,
+                rs.getString("response_body"),
+            ) },
+            initiatorId, idempotencyKey,
+        ).firstOrNull()
+
+    fun storeResponse(txnId: UUID, code: Int, body: String) {
+        jdbc.update(
+            "UPDATE transactions SET response_code = ?, response_body = ?::jsonb, updated_at = now() WHERE id = ?",
+            code, body, txnId,
+        )
+    }
 }
+
+data class ExistingTxn(
+    val id: UUID,
+    val status: String,
+    val requestHash: String,
+    val responseCode: Int?,
+    val responseBody: String?,
+)
