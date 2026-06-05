@@ -80,4 +80,36 @@ class LedgerConcurrencyTest : PostgresTestBase() {
         assertEquals(10, committedCount,
             "wrong number of transfers committed — only $committedCount succeeded instead of 10")
     }
+
+    @Test fun `bidirectional concurrent transfers do not deadlock and conserve money`() {
+        val a = fixtures.walletWith(100000)   // both well-funded so few/no INSUFFICIENT_FUNDS
+        val b = fixtures.walletWith(100000)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(16)
+        val errors = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+        val tasks = (1..200).map { i ->
+            Runnable {
+                val (from, to) = if (i % 2 == 0) a to b else b to a   // half A->B, half B->A
+                try {
+                    ledger.recordTransfer(TxnType.P2P, "bidi-$i", "h$i", java.util.UUID.randomUUID(), from, to, 100)
+                } catch (e: com.walletx.platform.ApiException) {
+                    if (e.code != "INSUFFICIENT_FUNDS") errors.add("${e.code}: ${e.message}")
+                } catch (e: Exception) {
+                    errors.add(e.javaClass.simpleName + ": " + e.message)   // a deadlock would surface here
+                }
+            }
+        }
+        tasks.forEach { pool.submit(it) }
+        pool.shutdown()
+        val finished = pool.awaitTermination(60, java.util.concurrent.TimeUnit.SECONDS)
+
+        kotlin.test.assertTrue(finished, "tasks did not finish in time (possible deadlock)")
+        kotlin.test.assertTrue(errors.isEmpty(), "unexpected errors (deadlock/serialization failure?): $errors")
+        // money conserved across the two accounts:
+        kotlin.test.assertEquals(200000L, fixtures.balanceOf(a) + fixtures.balanceOf(b))
+        // ledger consistent with balances for both (both seeded at 100000 by raw SQL with no ledger entry,
+        // so balance - seed == sumEntries):
+        kotlin.test.assertEquals(fixtures.balanceOf(a) - 100000L, repo.sumEntries(a))
+        kotlin.test.assertEquals(fixtures.balanceOf(b) - 100000L, repo.sumEntries(b))
+    }
 }
