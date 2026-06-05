@@ -28,7 +28,7 @@ class LedgerServiceTest : PostgresTestBase() {
 
     @Test fun `transfer writes exactly two entries summing to zero`() {
         val a = fixtures.walletWith(50000); val b = fixtures.walletWith(0)
-        val txn = ledger.recordTransfer(TxnType.P2P, "k2", "h2", UUID.randomUUID(), a, b, 10000)
+        val txn = ledger.recordTransfer(TxnType.P2P, "k2", "h2", UUID.randomUUID(), a, b, 10000).transactionId
 
         val net = jdbc.queryForObject(
             """SELECT SUM(CASE direction WHEN 'CREDIT' THEN amount ELSE -amount END)

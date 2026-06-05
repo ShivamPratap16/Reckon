@@ -62,5 +62,5 @@ class LedgerService(
     }
 
     private fun extractCode(body: String): String =
-        Regex("\"code\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: "FAILED"
+        Regex("\"code\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: "FAILED"
 }
