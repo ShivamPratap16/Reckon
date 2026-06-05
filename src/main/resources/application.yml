@@ -20,3 +20,4 @@ reckon:
     scheduler:
       enabled: true
     batch-size: 100
+    send-timeout-ms: 10000
