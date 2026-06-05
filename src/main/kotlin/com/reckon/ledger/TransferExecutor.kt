@@ -2,6 +2,8 @@ package com.reckon.ledger
 
 import com.reckon.account.AccountRepository
 import com.reckon.account.AccountType
+import com.reckon.outbox.EventType
+import com.reckon.outbox.OutboxRepository
 import com.reckon.platform.ApiException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -17,6 +19,7 @@ import java.util.UUID
 class TransferExecutor(
     private val accounts: AccountRepository,
     private val ledger: LedgerRepository,
+    private val outbox: OutboxRepository,
 ) {
     @Transactional
     fun execute(txnId: UUID, from: UUID, to: UUID, amount: Long) {
@@ -30,6 +33,9 @@ class TransferExecutor(
         ledger.insertEntry(LedgerEntry(txnId, to, Direction.CREDIT, amount))
         accounts.applyDelta(from, -amount)
         accounts.applyDelta(to, amount)
+        val payload = """{"eventId":null,"transactionId":"$txnId","type":"P2P",""" +
+            """"fromAccountId":"$from","toAccountId":"$to","amount":$amount,"status":"COMPLETED"}"""
+        outbox.append(txnId, EventType.PAYMENT_COMPLETED, payload)
         // conditional status flip — recovery-vs-slow-request guard; throwing rolls back this whole txn
         if (ledger.markCompletedIfPending(txnId) == 0) {
             throw IllegalStateException("transaction $txnId no longer PENDING; aborting")
