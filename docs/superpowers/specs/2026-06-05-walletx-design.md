@@ -78,6 +78,11 @@ walletx (single Spring Boot app, Gradle, Kotlin)
 - **Polling publisher** (scheduled task):
   `SELECT … WHERE published=false ORDER BY id LIMIT n FOR UPDATE SKIP LOCKED` → publish →
   mark `published=true`. `SKIP LOCKED` makes it safe under multiple instances.
+- **The poller is itself at-least-once by design:** if it crashes after the Kafka send but
+  before marking `published=true`, the event is re-sent — safe because consumers dedup on
+  `event_id`. This is what makes the end-to-end delivery story coherent.
+- **Kafka partition key = `aggregate_id`** so all events for one transaction/account land on
+  one partition and arrive **in order**.
 - Explicitly **not Debezium/CDC** — adds infra weight without teaching more for this scope.
 
 ### Hot-account serialization — measured trade-off
@@ -225,10 +230,23 @@ POST /transfers/p2p  { idempotencyKey, toUserId, amountPaisa }
        UPDATE balances on both rows
        INSERT outbox(event_id, 'payment.completed', payload)    -- same txn!
        UPDATE transactions SET status=COMPLETED, response_code/body=...
+           WHERE id=? AND status='PENDING'                      -- CONDITIONAL (see below)
+       if rowcount == 0: ROLLBACK everything (recovery already FAILED it)
      COMMIT
   5. return result
 ```
 Ledger + balances + outbox + status flip **commit together or not at all**.
+
+**Conditional status flip — the recovery-vs-slow-request guard (optimistic state transition).**
+The status flip is guarded by `WHERE status='PENDING'` (and `saga_state=expected` on the saga
+path). Why: a slow-but-alive original request (GC pause, lock wait) could have its row marked
+FAILED by the recovery job; if the original then woke and committed step 4, money would move on
+a transaction the client was told failed → **double payment**. Because the guarded flip lives in
+the *same atomic transaction* as the ledger write, a rowcount of 0 means recovery won — so we
+roll back entries, balances, and outbox too. Either the original wins (commits before recovery
+looks) or recovery wins (original aborts), **never both**. The same `WHERE ...=expected` guard
+applies to the saga's step 3 and the recovery resume path. This makes the **recovery job
+authoritative** for state transitions.
 
 **Failure handling on the local path:**
 - **Insufficient funds:** inner txn rolls back; then in a **new** txn set
@@ -253,7 +271,9 @@ Step 3 (local):  BEGIN
                                                           -- unique(txn_id, account_id, direction)
                    UPDATE balances
                    INSERT outbox('payment.completed')
-                   status=COMPLETED, saga_state=DONE
+                   UPDATE ... SET status=COMPLETED, saga_state=DONE
+                       WHERE id=? AND saga_state='BANK_CONFIRMED'   -- conditional guard
+                   if rowcount == 0: ROLLBACK (recovery already resolved it)
                  COMMIT
 ```
 **The bank simulator is idempotent on `transactionId`**: calling `debit` twice with the same
@@ -306,10 +326,14 @@ never dangles. Notifications consumer is identical with `consumer_name='notifica
 
 ## 6. Reconciliation & Recovery (scheduled jobs)
 
-1. **Sum-to-zero audit:** for each transaction, assert `SUM(credit) == SUM(debit)`.
+1. **Sum-to-zero audit:** for each transaction *with entries* (COMPLETED, plus saga txns
+   mid-flight at step 3), assert `SUM(credit) == SUM(debit)`. FAILED txns have zero entries
+   and pass vacuously — scoped out explicitly so the audit isn't mistaken for buggy.
 2. **Balance audit:** for each account, assert `balance == SUM(signed entries)` — *verifies*
    the denormalized balance, flags drift.
-3. **Stuck-PENDING audit + recovery:** see §4 recovery job (saga + local paths).
+3. **Stuck-PENDING audit + recovery:** see §4 recovery job (saga + local paths). The recovery
+   job is **authoritative** for state transitions via the conditional `WHERE status=expected`
+   guard — a slow original request that loses the race aborts cleanly (no double payment).
 4. Findings are logged + exposed as metrics; auto-fix only where provably safe (saga resume).
 
 ---
@@ -320,7 +344,8 @@ never dangles. Notifications consumer is identical with `consumer_name='notifica
   including deliberate **duplicate-idempotency-key retries** and **concurrent debits of the
   same account**.
 - **Assertions after the run:**
-  - Total money in the system unchanged (`SUM(all balances)` conserved; `SUM(all entries)=0`).
+  - **`SUM(balance)` across ALL accounts == 0 at all times** — the strong form of "money is
+    conserved" (every entry pair cancels under the sign convention). Cleaner README headline.
   - No negative `USER_WALLET`/`MERCHANT` balances.
   - No duplicate debits for any idempotency key.
   - Every `balance == SUM(entries)` (reconciliation passes clean).
