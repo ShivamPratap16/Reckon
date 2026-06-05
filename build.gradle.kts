@@ -5,7 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.6"
 }
 
-group = "com.walletx"
+group = "com.reckon"
 version = "0.1.0"
 java { toolchain { languageVersion.set(JavaLanguageVersion.of(21)) } }
 

@@ -1,11 +1,11 @@
 spring:
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/walletx}
-    username: ${DB_USER:walletx}
-    password: ${DB_PASSWORD:walletx}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/reckon}
+    username: ${DB_USER:reckon}
+    password: ${DB_PASSWORD:reckon}
   flyway:
     enabled: true
-walletx:
+reckon:
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-must-be-at-least-256-bits-long-xxxxx}
     ttl-minutes: 60

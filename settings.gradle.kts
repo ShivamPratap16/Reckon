@@ -1,1 +1,1 @@
-rootProject.name = "walletx"
+rootProject.name = "reckon"
