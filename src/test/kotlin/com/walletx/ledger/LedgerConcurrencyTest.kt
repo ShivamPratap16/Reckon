@@ -60,8 +60,9 @@ class LedgerConcurrencyTest : PostgresTestBase() {
         val balanceB = fixtures.balanceOf(b)
         assertEquals(1000L, balanceA + balanceB, "money was created or destroyed")
 
-        // Atomicity: under the auto-commit bug, failed attempts would leave orphaned
-        // CREDIT entries on b with no balance increment, so sumEntries(b) > balanceOf(b).
+        // Atomicity: under the auto-commit bug, the `balance_nonneg` CHECK on the source account
+        // could abort the `applyDelta` for `a` after the DEBIT/CREDIT entries had already committed,
+        // leaving orphaned entries whose sum diverges from `a`'s actual balance.
         // a is seeded by raw SQL with no ledger entry — its entry sum must equal negative of amount moved
         val movedAmount = 1000L - balanceA
         assertEquals(-movedAmount, repo.sumEntries(a), "ledger entries for a don't match balance delta")
