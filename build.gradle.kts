@@ -27,6 +27,7 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation(kotlin("test"))
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:postgresql:1.20.4")
     testImplementation("org.testcontainers:junit-jupiter:1.20.4")
