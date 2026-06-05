@@ -4,18 +4,17 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
 @SpringBootTest
-@Testcontainers
 abstract class PostgresTestBase {
     companion object {
-        @Container
-        @JvmStatic
-        val pg = PostgreSQLContainer("postgres:16").apply {
+        // Singleton container shared across ALL test classes in the JVM.
+        // Started once, stopped via JVM shutdown hook — avoids the "HikariPool connections
+        // stale after container restart" problem when multiple Spring contexts are created.
+        val pg: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16").apply {
             withDatabaseName("walletx"); withUsername("walletx"); withPassword("walletx")
-        }
+            withReuse(false)
+        }.also { it.start() }
 
         @JvmStatic
         @DynamicPropertySource
