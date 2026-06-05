@@ -35,11 +35,10 @@ dependencies {
 
 ext["testcontainers.version"] = "1.20.4"
 
+// Machine-specific Docker socket config (e.g. Docker Desktop path) belongs in
+// ~/.testcontainers.properties, not here, to keep the build portable across machines and CI.
 tasks.withType<Test> {
     useJUnitPlatform()
-    environment("DOCKER_HOST", "unix:///Users/shivamraj/.docker/run/docker.sock")
-    environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "/Users/shivamraj/.docker/run/docker.sock")
-    jvmArgs("-Ddocker.host=unix:///Users/shivamraj/.docker/run/docker.sock")
-    jvmArgs("-Dapi.version=1.44")
+    systemProperty("api.version", "1.44")
 }
 kotlin { compilerOptions { freeCompilerArgs.add("-Xjsr305=strict") } }

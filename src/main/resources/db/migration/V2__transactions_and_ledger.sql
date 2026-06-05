@@ -15,6 +15,7 @@ CREATE TABLE transactions (
     created_at      timestamptz NOT NULL DEFAULT now(),
     updated_at      timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT amount_positive CHECK (amount > 0),
+    -- Postgres treats NULL initiator_id as distinct, so system-initiated (NULL-initiator) transactions are intentionally not idempotency-protected by this constraint.
     CONSTRAINT uq_initiator_idem UNIQUE (initiator_id, idempotency_key)
 );
 

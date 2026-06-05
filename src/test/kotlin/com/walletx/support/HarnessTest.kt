@@ -1,5 +1,6 @@
 package com.walletx.support
 
+import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
@@ -11,6 +12,6 @@ class HarnessTest : PostgresTestBase() {
     @Test
     fun `context loads and db reachable`() {
         val one = jdbc.queryForObject("SELECT 1", Int::class.java)
-        assert(one == 1)
+        assertEquals(1, one)
     }
 }
