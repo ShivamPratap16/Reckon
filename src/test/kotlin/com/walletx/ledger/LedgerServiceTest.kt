@@ -15,6 +15,7 @@ class LedgerServiceTest : PostgresTestBase() {
     @Autowired lateinit var fixtures: Fixtures
     @Autowired lateinit var repo: LedgerRepository
     @Autowired lateinit var jdbc: JdbcTemplate
+    @Autowired lateinit var executor: TransferExecutor
 
     @Test fun `successful transfer moves money and balances net to zero`() {
         val a = fixtures.walletWith(50000)   // ₹500
@@ -66,6 +67,25 @@ class LedgerServiceTest : PostgresTestBase() {
         kotlin.test.assertEquals(0L, entryCount)
         val status = jdbc.queryForObject("SELECT status FROM transactions WHERE idempotency_key = ?", String::class.java, idem)
         kotlin.test.assertEquals("FAILED", status)
+    }
+
+    @Test fun `execute rolls back entries and balances when status flip guard trips`() {
+        val a = fixtures.walletWith(50000)
+        val b = fixtures.walletWith(0)
+        // create a PENDING txn header, then move it OUT of PENDING so markCompletedIfPending returns 0
+        val txnId = repo.insertPending(TxnType.P2P, "guard-${java.util.UUID.randomUUID()}", "h",
+            20000, java.util.UUID.randomUUID(), a, b)
+        jdbc.update("UPDATE transactions SET status='COMPLETED' WHERE id=?", txnId)
+
+        org.junit.jupiter.api.assertThrows<IllegalStateException> {
+            executor.execute(txnId, a, b, 20000)
+        }
+        // everything inside execute must have rolled back:
+        kotlin.test.assertEquals(50000L, fixtures.balanceOf(a))   // unchanged
+        kotlin.test.assertEquals(0L, fixtures.balanceOf(b))       // unchanged
+        val entries = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM ledger_entries WHERE transaction_id=?", Long::class.java, txnId)
+        kotlin.test.assertEquals(0L, entries)                     // no orphaned entries
     }
 
     @Test fun `total system balance is conserved by a transfer`() {
