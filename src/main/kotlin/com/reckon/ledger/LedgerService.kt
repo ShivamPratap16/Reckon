@@ -1,5 +1,6 @@
 package com.reckon.ledger
 
+import com.reckon.account.SystemAccounts
 import com.reckon.platform.ApiException
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
@@ -32,7 +33,7 @@ class LedgerService(
         }
 
         try {
-            executor.execute(txnId, from, to, amount)
+            executor.execute(txnId, type, from, to, amount)
         } catch (e: Exception) {
             val reason = (e as? ApiException)?.code ?: "EXECUTION_ERROR"
             statusWriter.failInOwnTxn(txnId, reason)
@@ -42,6 +43,16 @@ class LedgerService(
         }
         ledger.storeResponse(txnId, 200, """{"transactionId":"$txnId","status":"COMPLETED"}""")
         return TransferOutcome(txnId, "COMPLETED", replayed = false)
+    }
+
+    /** Record a CASHBACK transaction (REWARDS_POOL -> wallet). Must be called within the
+     *  caller's transaction (e.g. the consumer's) so it commits atomically with the dedup mark.
+     *  Emits no outbox event (prevents a cashback feedback loop). */
+    fun recordCashback(sourceEventId: UUID, toAccount: UUID, amount: Long) {
+        val txnId = ledger.insertPending(
+            TxnType.CASHBACK, "cashback:$sourceEventId", "-", amount,
+            SystemAccounts.REWARDS_POOL, SystemAccounts.REWARDS_POOL, toAccount)
+        executor.execute(txnId, TxnType.CASHBACK, SystemAccounts.REWARDS_POOL, toAccount, amount, emitEvent = false)
     }
 
     /** Apply the 4-way replay decision for a duplicate (initiator, key). */

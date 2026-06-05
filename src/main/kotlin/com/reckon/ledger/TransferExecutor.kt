@@ -22,7 +22,7 @@ class TransferExecutor(
     private val outbox: OutboxRepository,
 ) {
     @Transactional
-    fun execute(txnId: UUID, from: UUID, to: UUID, amount: Long) {
+    fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long, emitEvent: Boolean = true) {
         // lock both rows in fixed id order (deadlock-safe); lock is held for the whole txn
         val locked = accounts.lockByIdsInOrder(listOf(from, to)).associateBy { it.id }
         val src = locked[from] ?: error("source account not found: $from")
@@ -33,9 +33,11 @@ class TransferExecutor(
         ledger.insertEntry(LedgerEntry(txnId, to, Direction.CREDIT, amount))
         accounts.applyDelta(from, -amount)
         accounts.applyDelta(to, amount)
-        val payload = """{"eventId":null,"transactionId":"$txnId","type":"P2P",""" +
-            """"fromAccountId":"$from","toAccountId":"$to","amount":$amount,"status":"COMPLETED"}"""
-        outbox.append(txnId, EventType.PAYMENT_COMPLETED, payload)
+        if (emitEvent) {
+            val payload = """{"eventId":null,"transactionId":"$txnId","type":"${type.name}",""" +
+                """"fromAccountId":"$from","toAccountId":"$to","amount":$amount,"status":"COMPLETED"}"""
+            outbox.append(txnId, EventType.PAYMENT_COMPLETED, payload)
+        }
         // conditional status flip — recovery-vs-slow-request guard; throwing rolls back this whole txn
         if (ledger.markCompletedIfPending(txnId) == 0) {
             throw IllegalStateException("transaction $txnId no longer PENDING; aborting")
