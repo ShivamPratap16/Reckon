@@ -3,3 +3,4 @@ build/
 *.class
 .idea/
 *.log
+!gradle/wrapper/gradle-wrapper.jar
