@@ -24,6 +24,7 @@ class TransferController(
             ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_WALLET", "caller has no wallet")
         val to = accounts.findByOwner(req.toUserId)
             ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_PAYEE", "payee has no wallet")
+        // TODO(Plan 2): replace String.hashCode() with a stable digest (e.g. SHA-256) before using requestHash for idempotency replay.
         val requestHash = listOf("P2P", from.id, to.id, req.amountPaisa).joinToString("|").hashCode().toString()
         val txnId = ledger.recordTransfer(
             TxnType.P2P, req.idempotencyKey, requestHash, callerId, from.id, to.id, req.amountPaisa)

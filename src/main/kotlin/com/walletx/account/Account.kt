@@ -51,7 +51,10 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
         val ordered = ids.distinct().sorted()
         return ordered.map { id ->
             jdbc.query(
-                "SELECT id, owner_id, type, balance, version FROM accounts WHERE id = ? FOR UPDATE",
+                // FOR NO KEY UPDATE instead of FOR UPDATE: prevents concurrent writers but still allows
+                // KEY SHARE locks taken by FK reference checks (e.g. ledger_entries.account_id → accounts).
+                // This avoids deadlocks between our writer lock and FK-share locks from concurrent inserts.
+                "SELECT id, owner_id, type, balance, version FROM accounts WHERE id = ? FOR NO KEY UPDATE",
                 mapper, id,
             ).firstOrNull() ?: throw IllegalStateException("account not found: $id")
         }
