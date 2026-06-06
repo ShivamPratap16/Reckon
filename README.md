@@ -132,6 +132,20 @@ To run it yourself: `./loadtest/run.sh` (requires Docker + k6).
 
 The full design — including the failure-mode reasoning behind idempotency replay, the system-account sign convention, the outbox delivery guarantees, and the recovery-vs-slow-request race — lives in [`docs/superpowers/specs`](docs/superpowers/specs) and the staged implementation plan in [`docs/superpowers/plans`](docs/superpowers/plans).
 
+## Property-based invariant testing
+
+Plan 10 adds `LedgerInvariantPropertyTest`, which proves the core ledger invariants hold not just for hand-picked scenarios but under **arbitrary sequences of mixed operations**.
+
+For each of five fixed seeds, the test:
+1. Creates 5 fresh accounts and funds them via the `AddMoneyService` saga (so `balance == SUM(entries)` is established from the start).
+2. Fires 120 random operations — P2P transfers, authorize, capture (full or partial), and void — absorbing expected failures (INSUFFICIENT_FUNDS, INSUFFICIENT_AVAILABLE, stale holds) in try/catch.
+3. Asserts the three invariants **scoped to the run's own accounts**:
+   - `balance == SUM(signed ledger entries)` — double-entry consistency.
+   - `reserved_balance == SUM(amount of still-HELD holds for that account)` — reservation bookkeeping.
+   - No user wallet ever goes negative (`balance ≥ 0`, `reserved_balance ≥ 0`).
+
+**Why seeded-random-in-Spring-`@Test` instead of jqwik:** jqwik's `@Property` runs on the JUnit Platform but not as a Jupiter `@Test`, so Spring's `SpringExtension` does not `@Autowired`-inject beans or wire Testcontainers into property methods. Seeded `kotlin.random.Random` inside a standard `@Test` gives the same value — deterministic, reproducible, DB-integrated — without any framework friction.
+
 ## Two-phase payments (hold → capture)
 
 Plan 9 adds card/UPI-style two-phase payments backed by `accounts.reserved_balance` and a `holds` table.
