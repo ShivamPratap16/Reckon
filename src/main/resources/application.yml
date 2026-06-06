@@ -22,6 +22,7 @@ reckon:
       enabled: true          # disabled in tests; tests call recover() directly
       stale-seconds: 30      # how long a saga may sit in BANK_PENDING before reconciling
       poll-ms: 5000
+      max-attempts: 3
   jwt:
     secret: ${JWT_SECRET:dev-only-secret-change-me-must-be-at-least-256-bits-long-xxxxx}
     ttl-minutes: 60

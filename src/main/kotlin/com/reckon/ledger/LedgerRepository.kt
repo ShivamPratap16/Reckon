@@ -98,6 +98,10 @@ class LedgerRepository(private val jdbc: JdbcTemplate) {
 
     fun amountOf(txnId: java.util.UUID): Long = jdbc.queryForObject(
         "SELECT amount FROM transactions WHERE id=?", Long::class.java, txnId)!!
+
+    fun incrementSagaAttempts(txnId: java.util.UUID): Int = jdbc.queryForObject(
+        "UPDATE transactions SET saga_attempts = saga_attempts + 1, updated_at = now() WHERE id = ? RETURNING saga_attempts",
+        Int::class.java, txnId)!!
 }
 
 data class ExistingTxn(

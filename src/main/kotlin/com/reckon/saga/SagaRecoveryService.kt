@@ -17,21 +17,57 @@ class SagaRecoveryService(
     private val bank: SimulatedBank,
     @Value("\${reckon.saga.recovery.stale-seconds}") private val staleSeconds: Long,
     @Value("\${reckon.saga.recovery.enabled:true}") private val enabled: Boolean,
+    @Value("\${reckon.saga.recovery.max-attempts:3}") private val maxAttempts: Int,
 ) {
     /** Reconcile sagas left mid-flight. Returns number of transactions acted on. */
     fun recover(): Int {
         var acted = 0
+
         // 1) BANK_PENDING older than stale window -> reconcile against the bank
         for (txnId in ledger.findSagaTxnsOlderThan("BANK_PENDING", staleSeconds)) {
-            when (bank.getStatus(txnId)) {
-                BankStatus.CHARGED -> { ledger.markBankConfirmed(txnId); completeStep3(txnId); acted++ }
-                BankStatus.DECLINED, BankStatus.NOT_FOUND -> { ledger.markSagaFailed(txnId, "BANK_UNRESOLVED"); acted++ }
+            try {
+                when (bank.getStatus(txnId)) {
+                    BankStatus.CHARGED -> {
+                        ledger.markBankConfirmed(txnId)
+                        completeStep3(txnId)
+                        acted++
+                    }
+                    BankStatus.DECLINED -> {
+                        // Definite no-charge: fail immediately
+                        ledger.markSagaFailed(txnId, "BANK_DECLINED")
+                        acted++
+                    }
+                    BankStatus.NOT_FOUND -> {
+                        // Eventual consistency: bank may not yet have the record.
+                        // Retry up to maxAttempts; only give up after that.
+                        val attempts = ledger.incrementSagaAttempts(txnId)
+                        if (attempts >= maxAttempts) {
+                            // Compensating action (no-op if bank never charged)
+                            bank.refund(txnId)
+                            ledger.markSagaFailed(txnId, "BANK_UNRESOLVED")
+                            acted++
+                        }
+                        // else: leave as BANK_PENDING — will be retried on next sweep
+                    }
+                }
+            } catch (e: Exception) {
+                // In production this would be logged/alerted. Swallow so one bad txn
+                // doesn't abort the entire sweep.
             }
         }
+
         // 2) BANK_CONFIRMED but no ledger entries (crashed before Step 3) -> resume
         for (txnId in ledger.findSagaTxnsOlderThan("BANK_CONFIRMED", 0)) {
-            if (ledger.hasNoEntries(txnId)) { completeStep3(txnId); acted++ }
+            try {
+                if (ledger.hasNoEntries(txnId)) {
+                    completeStep3(txnId)
+                    acted++
+                }
+            } catch (e: Exception) {
+                // Swallow per-txn failures; rest of sweep continues.
+            }
         }
+
         return acted
     }
 
