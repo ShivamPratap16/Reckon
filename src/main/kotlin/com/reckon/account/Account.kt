@@ -65,4 +65,9 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
         "UPDATE accounts SET balance = balance + ?, version = version + 1, updated_at = now() WHERE id = ?",
         delta, id,
     )
+
+    /** Optimistic update: apply delta only if version is unchanged. Returns rows updated (0 = conflict). */
+    fun applyDeltaCas(id: UUID, delta: Long, expectedVersion: Long): Int = jdbc.update(
+        "UPDATE accounts SET balance = balance + ?, version = version + 1, updated_at = now() WHERE id = ? AND version = ?",
+        delta, id, expectedVersion)
 }
