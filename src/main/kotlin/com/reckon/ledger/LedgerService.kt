@@ -49,9 +49,12 @@ class LedgerService(
      *  caller's transaction (e.g. the consumer's) so it commits atomically with the dedup mark.
      *  Emits no outbox event (prevents a cashback feedback loop). */
     fun recordCashback(sourceEventId: UUID, toAccount: UUID, amount: Long) {
-        val txnId = ledger.insertPending(
-            TxnType.CASHBACK, "cashback:$sourceEventId", "-", amount,
-            SystemAccounts.REWARDS_POOL, SystemAccounts.REWARDS_POOL, toAccount)
+        val txnId = try {
+            ledger.insertPending(TxnType.CASHBACK, "cashback:$sourceEventId", "-", amount,
+                SystemAccounts.REWARDS_POOL, SystemAccounts.REWARDS_POOL, toAccount)
+        } catch (e: org.springframework.dao.DuplicateKeyException) {
+            return   // cashback for this source event already recorded (defense-in-depth no-op)
+        }
         executor.execute(txnId, TxnType.CASHBACK, SystemAccounts.REWARDS_POOL, toAccount, amount, emitEvent = false)
     }
 
