@@ -131,3 +131,34 @@ To run it yourself: `./loadtest/run.sh` (requires Docker + k6).
 ## Design docs
 
 The full design — including the failure-mode reasoning behind idempotency replay, the system-account sign convention, the outbox delivery guarantees, and the recovery-vs-slow-request race — lives in [`docs/superpowers/specs`](docs/superpowers/specs) and the staged implementation plan in [`docs/superpowers/plans`](docs/superpowers/plans).
+
+## Two-phase payments (hold → capture)
+
+Plan 9 adds card/UPI-style two-phase payments backed by `accounts.reserved_balance` and a `holds` table.
+
+**Money model:** `available = balance − reserved`. The double-entry invariant `balance == SUM(ledger_entries)` is **preserved** — holds write **no** ledger entries; only captures do.
+
+| Operation | Effect |
+|-----------|--------|
+| **Authorize** | Locks payer row; asserts `available ≥ amount`; `reserved += amount`; inserts HELD hold. No money moves, no ledger entries. |
+| **Capture (full)** | `reserved −= holdAmount`; transfers `holdAmount` payer → payee via `TransferExecutor` (2 ledger entries, balances updated); hold → CAPTURED. |
+| **Capture (partial, captureAmount < holdAmount)** | `reserved −= holdAmount`; transfers only `captureAmount`; `holdAmount − captureAmount` returns silently to available. |
+| **Void / Expiry** | `reserved −= holdAmount`; hold → VOIDED / EXPIRED. Nothing moves. |
+
+**Invariants enforced:**
+- `reserved_balance ≥ 0` (DB CHECK constraint)
+- Concurrent authorizes never over-reserve (`reserveIfAvailable` uses a WHERE guard: `balance − reserved ≥ amount`)
+- Idempotent authorize: select-before-insert pattern (no aborted-txn problem from DuplicateKeyException)
+- Status transitions guarded: `markCaptured` / `markClosed` use `WHERE status='HELD'`; rowcount 0 → throw
+
+**Expiry job:** `HoldExpiryService.expireDue` iterates expired holds and calls `HoldExpiryWorker.expireOne` cross-bean — the separate-bean pattern ensures `@Transactional` engages via the Spring proxy (avoids self-invocation trap). Disabled in tests via `reckon.holds.expiry.enabled=false`.
+
+**Reconciliation:** `ReconciliationService.run()` now also audits `reserved_balance == SUM(outstanding HELD hold amounts)` per account (reports `reservedDrifts`).
+
+### Endpoints
+
+```
+POST /payments/authorize          { idempotencyKey, toUserId, amountPaisa, ttlSeconds }
+POST /payments/{holdId}/capture   { amountPaisa? }    -- null = full capture
+POST /payments/{holdId}/void
+```
