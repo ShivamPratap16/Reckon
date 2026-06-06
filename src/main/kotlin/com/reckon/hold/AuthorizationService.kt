@@ -38,14 +38,18 @@ class AuthorizationService(
 
     /** Settle up to the held amount; release any uncaptured remainder. */
     @Transactional
-    fun capture(holdId: UUID, captureAmount: Long?): UUID {
+    fun capture(holdId: UUID, callerWalletId: UUID, captureAmount: Long?): UUID {
         val hold = holds.find(holdId) ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_HOLD", "hold not found")
         if (hold.status != HoldStatus.HELD) throw ApiException(HttpStatus.CONFLICT, "HOLD_NOT_HELD", "hold is ${hold.status}")
+        if (callerWalletId != hold.payerAccountId && callerWalletId != hold.payeeAccountId)
+            throw ApiException(org.springframework.http.HttpStatus.FORBIDDEN, "NOT_HOLD_PARTY", "caller is not a party to this hold")
         val toCapture = captureAmount ?: hold.amount
         if (toCapture <= 0 || toCapture > hold.amount)
             throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_CAPTURE", "capture must be in (0, amount]")
         accounts.lockByIdsInOrder(listOf(hold.payerAccountId, hold.payeeAccountId))
-        // release the FULL reservation; the actual transfer then debits the captured amount
+        // Release the FULL reservation BEFORE the transfer; the transfer then debits only the captured amount.
+        // This is safe ONLY because the whole method is one @Transactional: if the later markCaptured status
+        // guard loses a race (returns 0) and throws, this release is rolled back along with the transaction.
         if (accounts.releaseReserve(hold.payerAccountId, hold.amount) == 0)
             throw IllegalStateException("reservation missing for hold $holdId")
         val captureTxn = ledger.insertPending(TxnType.PAY_MERCHANT, "capture:$holdId", "-", toCapture,
@@ -58,11 +62,15 @@ class AuthorizationService(
 
     /** Cancel a hold and release the reservation. */
     @Transactional
-    fun void(holdId: UUID) {
+    fun void(holdId: UUID, callerWalletId: UUID) {
         val hold = holds.find(holdId) ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_HOLD", "hold not found")
         if (hold.status != HoldStatus.HELD) throw ApiException(HttpStatus.CONFLICT, "HOLD_NOT_HELD", "hold is ${hold.status}")
+        if (callerWalletId != hold.payerAccountId && callerWalletId != hold.payeeAccountId)
+            throw ApiException(org.springframework.http.HttpStatus.FORBIDDEN, "NOT_HOLD_PARTY", "caller is not a party to this hold")
         accounts.lockByIdsInOrder(listOf(hold.payerAccountId))
-        accounts.releaseReserve(hold.payerAccountId, hold.amount)
-        if (holds.markClosed(holdId, HoldStatus.VOIDED) == 0) throw IllegalStateException("hold $holdId no longer HELD")
+        if (holds.markClosed(holdId, HoldStatus.VOIDED) == 0)
+            throw IllegalStateException("hold $holdId no longer HELD")
+        if (accounts.releaseReserve(hold.payerAccountId, hold.amount) == 0)
+            throw IllegalStateException("reservation missing for hold $holdId")
     }
 }
