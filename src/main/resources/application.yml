@@ -5,6 +5,13 @@ spring:
     password: ${DB_PASSWORD:reckon}
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 200ms
+      lettuce:
+        shutdown-timeout: 100ms
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
     producer:
@@ -22,6 +29,10 @@ management:
       exposure:
         include: health
 reckon:
+  idempotency:
+    cache:
+      enabled: true       # tests without Redis set false; the Redis test sets true
+      ttl-hours: 24
   ledger:
     optimistic-max-retries: 20
   saga:

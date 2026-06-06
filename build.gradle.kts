@@ -37,6 +37,8 @@ dependencies {
     implementation("org.springframework.kafka:spring-kafka")
     testImplementation("org.testcontainers:kafka:1.20.4")
     testImplementation("org.springframework.kafka:spring-kafka-test")
+
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 }
 
 ext["testcontainers.version"] = "1.20.4"
