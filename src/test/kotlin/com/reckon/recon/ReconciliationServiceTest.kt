@@ -75,7 +75,12 @@ class ReconciliationServiceTest : PostgresTestBase() {
             UUID.randomUUID(), wallet, SystemAccounts.REWARDS_POOL)
         // make it old so it crosses the stale threshold regardless of config
         jdbc.update("UPDATE transactions SET created_at = now() - interval '2 days' WHERE id = ?", txnId)
-        val report = recon.run()
-        assertTrue(report.stuckPending.contains(txnId), "expected $txnId in stuck list ${report.stuckPending}")
+        try {
+            val report = recon.run()
+            assertTrue(report.stuckPending.contains(txnId), "expected $txnId in stuck list ${report.stuckPending}")
+        } finally {
+            jdbc.update("DELETE FROM ledger_entries WHERE transaction_id = ?", txnId)
+            jdbc.update("DELETE FROM transactions WHERE id = ?", txnId)
+        }
     }
 }
