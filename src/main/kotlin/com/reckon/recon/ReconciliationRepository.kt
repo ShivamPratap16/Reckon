@@ -28,6 +28,14 @@ class ReconciliationRepository(private val jdbc: JdbcTemplate) {
         { rs, _ -> BalanceDrift(rs.getObject("id", UUID::class.java), rs.getLong("balance"), rs.getLong("computed")) },
     )
 
+    /** Accounts whose reserved_balance disagrees with the sum of their outstanding HELD holds. */
+    fun findReservedDrifts(): List<ReservedDrift> = jdbc.query(
+        """SELECT a.id, a.reserved_balance,
+                  COALESCE((SELECT SUM(h.amount) FROM holds h WHERE h.payer_account_id = a.id AND h.status='HELD'),0) AS computed
+           FROM accounts a
+           WHERE a.reserved_balance <> COALESCE((SELECT SUM(h.amount) FROM holds h WHERE h.payer_account_id=a.id AND h.status='HELD'),0)""",
+        { rs, _ -> ReservedDrift(rs.getObject("id", java.util.UUID::class.java), rs.getLong("reserved_balance"), rs.getLong("computed")) })
+
     /** Transactions stuck in PENDING with no entries, older than the given window. */
     fun findStuckPending(staleSeconds: Long): List<UUID> = jdbc.query(
         """SELECT t.id FROM transactions t

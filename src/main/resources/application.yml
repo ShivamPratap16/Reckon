@@ -58,3 +58,8 @@ reckon:
     enabled: true          # scheduled audit on in prod; tests disable + call run() directly
     stale-seconds: 3600    # PENDING older than 1h is "stuck"
     poll-ms: 60000
+  holds:
+    expiry:
+      enabled: true
+      poll-ms: 30000
+      batch-size: 100

@@ -6,7 +6,7 @@ import java.util.UUID
 
 enum class AccountType { USER_WALLET, BANK_SETTLEMENT, REWARDS_POOL, MERCHANT }
 
-data class Account(val id: UUID, val ownerId: UUID?, val type: AccountType, val balance: Long, val version: Long)
+data class Account(val id: UUID, val ownerId: UUID?, val type: AccountType, val balance: Long, val version: Long, val reserved: Long = 0)
 
 object SystemAccounts {
     val BANK_SETTLEMENT: UUID = UUID.fromString("00000000-0000-0000-0000-000000000001")
@@ -23,6 +23,7 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
             AccountType.valueOf(rs.getString("type")),
             rs.getLong("balance"),
             rs.getLong("version"),
+            rs.getLong("reserved_balance"),
         )
     }
 
@@ -31,16 +32,16 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
             "INSERT INTO accounts(owner_id, type) VALUES (?, 'USER_WALLET') RETURNING id",
             UUID::class.java, ownerId,
         )!!
-        return Account(id, ownerId, AccountType.USER_WALLET, 0, 0)
+        return Account(id, ownerId, AccountType.USER_WALLET, 0, 0, 0)
     }
 
     fun findByOwner(ownerId: UUID): Account? = jdbc.query(
-        "SELECT id, owner_id, type, balance, version FROM accounts WHERE owner_id = ? AND type='USER_WALLET'",
+        "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE owner_id = ? AND type='USER_WALLET'",
         mapper, ownerId,
     ).firstOrNull()
 
     fun findById(id: UUID): Account? = jdbc.query(
-        "SELECT id, owner_id, type, balance, version FROM accounts WHERE id = ?", mapper, id,
+        "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE id = ?", mapper, id,
     ).firstOrNull()
 
     /**
@@ -54,11 +55,21 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
                 // FOR NO KEY UPDATE instead of FOR UPDATE: prevents concurrent writers but still allows
                 // KEY SHARE locks taken by FK reference checks (e.g. ledger_entries.account_id → accounts).
                 // This avoids deadlocks between our writer lock and FK-share locks from concurrent inserts.
-                "SELECT id, owner_id, type, balance, version FROM accounts WHERE id = ? FOR NO KEY UPDATE",
+                "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE id = ? FOR NO KEY UPDATE",
                 mapper, id,
             ).firstOrNull() ?: throw IllegalStateException("account not found: $id")
         }
     }
+
+    /** Reserve funds if available (balance - reserved >= amount). Returns rows updated (0 = insufficient available). */
+    fun reserveIfAvailable(id: UUID, amount: Long): Int = jdbc.update(
+        """UPDATE accounts SET reserved_balance = reserved_balance + ?, updated_at = now()
+           WHERE id = ? AND (balance - reserved_balance) >= ?""", amount, id, amount)
+
+    /** Release a reservation. Returns rows updated. */
+    fun releaseReserve(id: UUID, amount: Long): Int = jdbc.update(
+        "UPDATE accounts SET reserved_balance = reserved_balance - ?, updated_at = now() WHERE id = ? AND reserved_balance >= ?",
+        amount, id, amount)
 
     /** Apply a signed delta to balance and bump version. Returns rows updated. */
     fun applyDelta(id: UUID, delta: Long): Int = jdbc.update(
