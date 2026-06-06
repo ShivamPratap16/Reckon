@@ -78,7 +78,7 @@ class LedgerServiceTest : PostgresTestBase() {
         jdbc.update("UPDATE transactions SET status='COMPLETED' WHERE id=?", txnId)
 
         org.junit.jupiter.api.assertThrows<IllegalStateException> {
-            executor.execute(txnId, a, b, 20000)
+            executor.execute(txnId, TxnType.P2P, a, b, 20000)
         }
         // everything inside execute must have rolled back:
         kotlin.test.assertEquals(50000L, fixtures.balanceOf(a))   // unchanged

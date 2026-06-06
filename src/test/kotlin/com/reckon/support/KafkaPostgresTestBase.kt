@@ -9,7 +9,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 
 @SpringBootTest
-@TestPropertySource(properties = ["reckon.outbox.scheduler.enabled=false"])
+@TestPropertySource(properties = ["reckon.outbox.scheduler.enabled=false", "reckon.consumers.enabled=false"])
 abstract class KafkaPostgresTestBase {
     companion object {
         @JvmStatic val pg = PostgreSQLContainer("postgres:16").apply {
