@@ -28,6 +28,7 @@ class OptimisticTransferExecutor(
 
     /** Returns the number of attempts taken (for benchmark observability). */
     fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long): Int {
+        require(from != to) { "cannot transfer to self" }
         var attempts = 0
         while (true) {
             attempts++
