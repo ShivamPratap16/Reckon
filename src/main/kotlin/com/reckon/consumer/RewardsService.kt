@@ -16,7 +16,7 @@ class RewardsService(
     /** Idempotent: dedup mark + cashback in ONE transaction. Redelivery is a no-op. */
     @Transactional
     fun award(event: PaymentEvent) {
-        if (event.type == "CASHBACK") return                       // never cashback-on-cashback (loop guard)
+        if (event.type !in setOf("P2P", "PAY_MERCHANT")) return   // cashback only on spends (not ADD_MONEY/CASHBACK)
         if (!processed.markProcessed(CONSUMER, event.eventId)) return  // already handled -> skip
         val payer = event.fromAccountId ?: return
         val cashback = event.amount * cashbackBps / 10_000          // bps of amount, integer paisa
