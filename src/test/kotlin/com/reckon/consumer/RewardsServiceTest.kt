@@ -44,4 +44,35 @@ class RewardsServiceTest : PostgresTestBase() {
         rewards.award(event(payer, 20000, type = "CASHBACK"))
         assertEquals(0, fixtures.balanceOf(payer))   // no cashback on a cashback event
     }
+
+    @Test fun `concurrent redelivery of same event awards cashback exactly once`() {
+        val payer = fixtures.walletWith(0)
+        val eventId = java.util.UUID.randomUUID()
+        val e = PaymentEvent(eventId, java.util.UUID.randomUUID(), "P2P", payer, java.util.UUID.randomUUID(), 20000, "COMPLETED")
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
+        val errors = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+        val tasks = (1..8).map { Runnable {
+            try { rewards.award(e) } catch (ex: Exception) { errors.add(ex.javaClass.simpleName + ":" + ex.message) }
+        } }
+        tasks.forEach { pool.submit(it) }
+        pool.shutdown(); pool.awaitTermination(60, java.util.concurrent.TimeUnit.SECONDS)
+        kotlin.test.assertTrue(errors.isEmpty(), "unexpected errors: $errors")
+        assertEquals(200, fixtures.balanceOf(payer))   // exactly one cashback despite 8 concurrent deliveries
+        val cashbackTxns = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM transactions WHERE type='CASHBACK' AND to_account_id=?", Long::class.java, payer)
+        assertEquals(1L, cashbackTxns)
+    }
+
+    @Test fun `failure after dedup mark rolls back the processed_events row`() {
+        // payer account does NOT exist -> executor.lockByIdsInOrder throws inside recordCashback,
+        // after markProcessed already inserted in the same transaction -> whole txn must roll back
+        val ghostPayer = java.util.UUID.randomUUID()
+        val eventId = java.util.UUID.randomUUID()
+        val e = PaymentEvent(eventId, java.util.UUID.randomUUID(), "P2P", ghostPayer, java.util.UUID.randomUUID(), 20000, "COMPLETED")
+        org.junit.jupiter.api.assertThrows<Exception> { rewards.award(e) }
+        val marks = jdbc.queryForObject(
+            "SELECT COUNT(*) FROM processed_events WHERE consumer_name='rewards' AND event_id=?",
+            Long::class.java, eventId)
+        assertEquals(0L, marks)   // dedup mark rolled back with the failed cashback -> event can be retried
+    }
 }
