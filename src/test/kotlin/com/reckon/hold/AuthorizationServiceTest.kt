@@ -35,7 +35,7 @@ class AuthorizationServiceTest : PostgresTestBase() {
     @Test fun `full capture moves money and releases the reservation`() {
         val payer = fixtures.walletWith(50000); val payee = fixtures.walletWith(0)
         val hold = auth.authorize("h4", UUID.randomUUID(), payer, payee, 20000, 600)
-        auth.capture(hold, null)
+        auth.capture(hold, payer, null)
         assertEquals(30000, fixtures.balanceOf(payer))   // 50000 - 20000
         assertEquals(20000, fixtures.balanceOf(payee))
         assertEquals(0, reserved(payer))                 // released
@@ -44,7 +44,7 @@ class AuthorizationServiceTest : PostgresTestBase() {
     @Test fun `partial capture returns the remainder to available`() {
         val payer = fixtures.walletWith(50000); val payee = fixtures.walletWith(0)
         val hold = auth.authorize("h5", UUID.randomUUID(), payer, payee, 20000, 600)
-        auth.capture(hold, 12000)
+        auth.capture(hold, payer, 12000)
         assertEquals(38000, fixtures.balanceOf(payer))   // only 12000 captured
         assertEquals(12000, fixtures.balanceOf(payee))
         assertEquals(0, reserved(payer))                 // full reservation released; 8000 back to available
@@ -53,7 +53,7 @@ class AuthorizationServiceTest : PostgresTestBase() {
     @Test fun `void releases the reservation`() {
         val payer = fixtures.walletWith(50000); val payee = fixtures.walletWith(0)
         val hold = auth.authorize("h6", UUID.randomUUID(), payer, payee, 20000, 600)
-        auth.void(hold)
+        auth.void(hold, payer)
         assertEquals(50000, fixtures.balanceOf(payer)); assertEquals(0, reserved(payer))
     }
 
@@ -69,8 +69,8 @@ class AuthorizationServiceTest : PostgresTestBase() {
     @Test fun `capturing a voided hold is rejected`() {
         val payer = fixtures.walletWith(50000); val payee = fixtures.walletWith(0)
         val hold = auth.authorize("h8", UUID.randomUUID(), payer, payee, 20000, 600)
-        auth.void(hold)
-        val ex = assertThrows<ApiException> { auth.capture(hold, null) }
+        auth.void(hold, payer)
+        val ex = assertThrows<ApiException> { auth.capture(hold, payer, null) }
         assertEquals("HOLD_NOT_HELD", ex.code)
     }
 }
