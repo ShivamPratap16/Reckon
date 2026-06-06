@@ -65,6 +65,43 @@ class LedgerRepository(private val jdbc: JdbcTemplate) {
             code, body, txnId,
         )
     }
+
+    fun setSagaState(txnId: java.util.UUID, state: String) =
+        jdbc.update("UPDATE transactions SET saga_state = ?, updated_at = now() WHERE id = ?", state, txnId)
+
+    /** Guarded: BANK_PENDING -> BANK_CONFIRMED. Returns rows updated. */
+    fun markBankConfirmed(txnId: java.util.UUID): Int = jdbc.update(
+        "UPDATE transactions SET saga_state='BANK_CONFIRMED', updated_at=now() WHERE id=? AND saga_state='BANK_PENDING'",
+        txnId)
+
+    fun markSagaFailed(txnId: java.util.UUID, reason: String): Int = jdbc.update(
+        """UPDATE transactions SET status='FAILED', saga_state='BANK_FAILED', failure_reason=?, updated_at=now()
+           WHERE id=? AND status='PENDING'""", reason, txnId)
+
+    /** Saga completion guard: complete only if still BANK_CONFIRMED. Returns rows updated. */
+    fun markCompletedIfBankConfirmed(txnId: java.util.UUID): Int = jdbc.update(
+        """UPDATE transactions SET status='COMPLETED', saga_state='DONE', updated_at=now()
+           WHERE id=? AND saga_state='BANK_CONFIRMED'""", txnId)
+
+    /** Recovery scan: ADD_MONEY txns in a given saga_state older than N seconds. */
+    fun findSagaTxnsOlderThan(sagaState: String, seconds: Long): List<java.util.UUID> = jdbc.query(
+        """SELECT id FROM transactions
+           WHERE type='ADD_MONEY' AND saga_state=? AND updated_at < now() - make_interval(secs => ?)""",
+        { rs, _ -> rs.getObject("id", java.util.UUID::class.java) }, sagaState, seconds.toDouble())
+
+    fun hasNoEntries(txnId: java.util.UUID): Boolean = jdbc.queryForObject(
+        "SELECT NOT EXISTS(SELECT 1 FROM ledger_entries WHERE transaction_id=?)", Boolean::class.java, txnId)!!
+
+    /** For the saga to know the wallet to credit during recovery. */
+    fun toAccountOf(txnId: java.util.UUID): java.util.UUID = jdbc.queryForObject(
+        "SELECT to_account_id FROM transactions WHERE id=?", java.util.UUID::class.java, txnId)!!
+
+    fun amountOf(txnId: java.util.UUID): Long = jdbc.queryForObject(
+        "SELECT amount FROM transactions WHERE id=?", Long::class.java, txnId)!!
+
+    fun incrementSagaAttempts(txnId: java.util.UUID): Int = jdbc.queryForObject(
+        "UPDATE transactions SET saga_attempts = saga_attempts + 1, updated_at = now() WHERE id = ? RETURNING saga_attempts",
+        Int::class.java, txnId)!!
 }
 
 data class ExistingTxn(
