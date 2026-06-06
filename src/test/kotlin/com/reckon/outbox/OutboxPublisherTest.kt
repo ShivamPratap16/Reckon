@@ -38,8 +38,10 @@ class OutboxPublisherTest : KafkaPostgresTestBase() {
 
         val records = consumer.poll(Duration.ofSeconds(10))
         consumer.close()
-        assertEquals(1, records.count())
-        val record = records.iterator().next()
+        // filter by key in case prior tests published messages to the shared topic
+        val matching = records.filter { it.key() == aggregate.toString() }
+        assertEquals(1, matching.size)
+        val record = matching.first()
         assertEquals(aggregate.toString(), record.key())                 // partition key = aggregateId
         assertTrue(record.value().contains("\"eventId\"") && !record.value().contains("null"))  // envelope filled real eventId (not null)
 
