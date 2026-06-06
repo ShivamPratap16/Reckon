@@ -5,7 +5,6 @@ import com.reckon.ledger.LedgerRepository
 import com.reckon.ledger.TransferExecutor
 import com.reckon.ledger.TxnType
 import com.reckon.platform.ApiException
-import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -24,13 +23,13 @@ class AuthorizationService(
     @Transactional
     fun authorize(idempotencyKey: String, initiatorId: UUID, payer: UUID, payee: UUID, amount: Long, ttlSeconds: Long): UUID {
         if (amount <= 0) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_AMOUNT", "amount must be positive")
+        // Idempotency: check for existing hold before locking (avoids DuplicateKeyException inside a txn which aborts it)
+        holds.findByInitiatorAndKey(initiatorId, idempotencyKey)?.let { return it.id }
         accounts.lockByIdsInOrder(listOf(payer))   // lock payer row for the available-funds check + reserve
-        val holdId = try {
-            holds.insertHeld(idempotencyKey, initiatorId, payer, payee, amount,
-                Instant.now().plus(ttlSeconds, ChronoUnit.SECONDS))
-        } catch (e: DuplicateKeyException) {
-            return holds.findByInitiatorAndKey(initiatorId, idempotencyKey)!!.id   // idempotent replay
-        }
+        // Re-check after lock in case a concurrent authorize with same key just committed
+        holds.findByInitiatorAndKey(initiatorId, idempotencyKey)?.let { return it.id }
+        val holdId = holds.insertHeld(idempotencyKey, initiatorId, payer, payee, amount,
+            Instant.now().plus(ttlSeconds, ChronoUnit.SECONDS))
         if (accounts.reserveIfAvailable(payer, amount) == 0) {
             throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_AVAILABLE", "insufficient available balance")
         }
