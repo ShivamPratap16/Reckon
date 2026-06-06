@@ -7,7 +7,7 @@ import org.springframework.test.context.TestPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
 
 @SpringBootTest
-@TestPropertySource(properties = ["reckon.outbox.scheduler.enabled=false", "reckon.consumers.enabled=false", "reckon.saga.recovery.enabled=false", "reckon.saga.recovery.stale-seconds=0", "reckon.reconciliation.enabled=false"])
+@TestPropertySource(properties = ["reckon.outbox.scheduler.enabled=false", "reckon.consumers.enabled=false", "reckon.saga.recovery.enabled=false", "reckon.saga.recovery.stale-seconds=0", "reckon.reconciliation.enabled=false", "reckon.idempotency.cache.enabled=false"])
 abstract class PostgresTestBase {
     companion object {
         // Singleton container shared across ALL test classes in the JVM.

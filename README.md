@@ -20,10 +20,11 @@ Reckon is a wallet/payments backend (think the core inside PhonePe / Paytm Walle
 - **The transfer is genuinely atomic.** Lock the two accounts in fixed id order → check funds → write two entries → update balances → flip status, all in one DB transaction. A real Spring gotcha surfaced here: a `@Transactional` method called on the same bean bypasses the proxy and silently runs in auto-commit. Reckon routes the transactional body through a separate bean (`TransferExecutor`) so the proxy actually engages.
 - **Deadlock-safe under load.** Concurrent transfers acquire row locks in a fixed order; `SELECT ... FOR NO KEY UPDATE` is used (not `FOR UPDATE`) so writer locks don't conflict with the `FOR KEY SHARE` locks Postgres takes for the `ledger_entries → accounts` foreign key — eliminating a real deadlock while preserving writer exclusion.
 - **Correctness is proven, not asserted.** Tests include 200 concurrent same-account debits (never overdraws, money conserved, no orphaned entries) and bidirectional A→B / B→A transfers that actually exercise the lock ordering. Failures are persisted in their own `REQUIRES_NEW` transaction so a rolled-back transfer still leaves a legible `FAILED` record.
+- **Idempotency is DB-authoritative with a Redis fast-path.** The `unique(initiator_id, idempotency_key)` constraint in Postgres is the ONLY race guard against double-debits — no amount of Redis failure can cause a double-spend. Redis caches only immutable **terminal** results (COMPLETED/FAILED), never in-flight PENDING, so a stale or missing cache entry never produces a wrong answer. On a cache hit the result is served without touching Postgres; on Redis failure the system degrades transparently to the DB-only path. The fast-path is gated by `reckon.idempotency.cache.enabled`; all 60 pre-Redis tests run with the cache disabled, proving idempotency works without Redis.
 
 ## Tech stack
 
-Kotlin · Spring Boot 3.3 · PostgreSQL · Flyway · Gradle · JUnit 5 · Testcontainers
+Kotlin · Spring Boot 3.3 · PostgreSQL · Flyway · Redis (idempotency fast-path) · Gradle · JUnit 5 · Testcontainers
 
 ## Running it
 
