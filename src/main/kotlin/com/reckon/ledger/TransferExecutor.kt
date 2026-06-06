@@ -22,7 +22,8 @@ class TransferExecutor(
     private val outbox: OutboxRepository,
 ) {
     @Transactional
-    fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long, emitEvent: Boolean = true) {
+    fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long,
+                emitEvent: Boolean = true, sagaGuard: Boolean = false) {
         // lock both rows in fixed id order (deadlock-safe); lock is held for the whole txn
         val locked = accounts.lockByIdsInOrder(listOf(from, to)).associateBy { it.id }
         val src = locked[from] ?: error("source account not found: $from")
@@ -38,9 +39,7 @@ class TransferExecutor(
                 """"fromAccountId":"$from","toAccountId":"$to","amount":$amount,"status":"COMPLETED"}"""
             outbox.append(txnId, EventType.PAYMENT_COMPLETED, payload)
         }
-        // conditional status flip — recovery-vs-slow-request guard; throwing rolls back this whole txn
-        if (ledger.markCompletedIfPending(txnId) == 0) {
-            throw IllegalStateException("transaction $txnId no longer PENDING; aborting")
-        }
+        val flipped = if (sagaGuard) ledger.markCompletedIfBankConfirmed(txnId) else ledger.markCompletedIfPending(txnId)
+        if (flipped == 0) throw IllegalStateException("transaction $txnId not in the expected state; aborting")
     }
 }
