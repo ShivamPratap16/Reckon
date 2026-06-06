@@ -13,16 +13,17 @@ class ReconciliationService(
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    /** Run all three audits. Read-only — reports, never mutates (a drift is a bug to investigate, not hide). */
+    /** Run all audits. Read-only — reports, never mutates (a drift is a bug to investigate, not hide). */
     fun run(): ReconciliationReport {
         val report = ReconciliationReport(
             unbalancedTransactions = repo.findUnbalancedTransactions(),
             balanceDrifts = repo.findBalanceDrifts(),
             stuckPending = repo.findStuckPending(staleSeconds),
+            reservedDrifts = repo.findReservedDrifts(),
         )
         if (!report.clean) {
-            log.error("RECONCILIATION FAILED: {} unbalanced txns, {} balance drifts, {} stuck pending",
-                report.unbalancedTransactions.size, report.balanceDrifts.size, report.stuckPending.size)
+            log.error("RECONCILIATION FAILED: {} unbalanced txns, {} balance drifts, {} stuck pending, {} reserved drifts",
+                report.unbalancedTransactions.size, report.balanceDrifts.size, report.stuckPending.size, report.reservedDrifts.size)
         } else {
             log.info("Reconciliation clean")
         }
