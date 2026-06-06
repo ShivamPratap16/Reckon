@@ -16,7 +16,14 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
 reckon:
+  ledger:
+    optimistic-max-retries: 20
   saga:
     recovery:
       enabled: true          # disabled in tests; tests call recover() directly
