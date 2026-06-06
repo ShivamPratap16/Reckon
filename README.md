@@ -4,15 +4,52 @@
 
 Reckon is a wallet/payments backend (think the core inside PhonePe / Paytm Wallet) built to be **provably correct under concurrency and failure** — money is never lost or created. It's a study in the hard parts of fintech backends: double-entry ledgers, idempotency, distributed-transaction failure handling, and reconciliation.
 
-## Status
+## Status — complete
 
-**Phase 1 (complete, fully tested):** the correctness-critical core.
-- JWT auth (signup/login, BCrypt, wallet-on-signup, stateless security)
-- Double-entry ledger with an atomic, concurrency-safe money-writer
-- Authenticated P2P transfers
-- 22 tests, including concurrency and atomicity proofs (Testcontainers + real Postgres)
+All seven phases of the design are implemented and tested (**63 tests**, Testcontainers with real Postgres / Kafka / Redis):
 
-**Designed, next phases** (see [`docs/superpowers/specs`](docs/superpowers/specs)): ADD_MONEY **saga** over a simulated idempotent bank with compensation, Kafka **transactional outbox** + exactly-once-effect consumers (cashback/notifications), idempotency-key **4-way replay**, and **reconciliation** jobs.
+1. JWT auth + double-entry ledger + atomic, concurrency-safe P2P transfers
+2. Stripe-style idempotency — 4-way replay, DB-authoritative with a Redis fast-path
+3. Kafka transactional outbox — at-least-once, ordered by aggregate, poison-message → dead-letter
+4. Idempotent consumers → exactly-once *effect* (rewards cashback, notifications)
+5. ADD_MONEY **saga** over a simulated idempotent bank, with crash/timeout recovery + compensating refund
+6. Scheduled **reconciliation** jobs — sum-to-zero, balance integrity, stuck-PENDING
+7. k6 load test + pessimistic-vs-optimistic locking **benchmark**
+
+Full design in [`docs/superpowers/specs`](docs/superpowers/specs); staged implementation plans in [`docs/superpowers/plans`](docs/superpowers/plans).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client([Client]) -->|"JWT"| API
+
+    subgraph App["Reckon · modular monolith (Spring Boot)"]
+        direction TB
+        API["auth · transfer · wallet<br/>REST + JWT"]
+        Ledger["<b>ledger</b><br/>the only money-writer<br/>double-entry + balances"]
+        Saga["saga<br/>ADD_MONEY + recovery"]
+        Bank["bank<br/>simulated, idempotent"]
+        Outbox["outbox publisher<br/>poll + SKIP LOCKED"]
+        Consumers["consumers<br/>rewards · notifications<br/>processed_events dedup"]
+        Recon["reconciliation<br/>scheduled audits"]
+    end
+
+    API -->|"P2P / pay merchant"| Ledger
+    API -->|"add money"| Saga
+    Saga -->|"debit (idempotent on txnId)"| Bank
+    Saga -->|"credit"| Ledger
+    API -.->|"terminal-replay fast path"| Redis[("Redis<br/>idempotency cache")]
+
+    Ledger -->|"2 entries + balances + outbox row<br/>(one atomic txn)"| PG[("PostgreSQL<br/>accounts · transactions<br/>ledger_entries · outbox")]
+    Outbox -->|"read unpublished"| PG
+    Outbox -->|"payment.completed<br/>key = aggregate"| Kafka{{"Kafka · payment-events"}}
+    Kafka --> Consumers
+    Consumers -->|"CASHBACK via ledger API"| Ledger
+    Recon -.->|"verify Σ=0 & balance=Σentries"| PG
+```
+
+**Key invariants:** money moves only through the ledger; the entry writes and the `payment.completed` outbox row commit in one transaction (no dual-write); Postgres' `unique(initiator_id, idempotency_key)` is the sole double-debit guard; Kafka is at-least-once and consumers dedup for exactly-once *effect*; Redis and every scheduler degrade gracefully (the system is correct without them).
 
 ## Engineering highlights
 
@@ -24,7 +61,7 @@ Reckon is a wallet/payments backend (think the core inside PhonePe / Paytm Walle
 
 ## Tech stack
 
-Kotlin · Spring Boot 3.3 · PostgreSQL · Flyway · Redis (idempotency fast-path) · Gradle · JUnit 5 · Testcontainers
+Kotlin · Spring Boot 3.3 · PostgreSQL · Apache Kafka · Redis (idempotency fast-path) · Flyway · Gradle · JUnit 5 · Testcontainers · k6
 
 ## Running it
 
@@ -39,12 +76,13 @@ docker compose up -d
 ./gradlew bootRun
 ```
 
-### API (Phase 1)
+### API
 
 ```
-POST /auth/signup     { email, password }            -> { token }
-POST /auth/login      { email, password }            -> { token }
-POST /transfers/p2p   { idempotencyKey, toUserId, amountPaisa }   (Bearer token)
+POST /auth/signup       { email, password }                              -> { token }
+POST /auth/login        { email, password }                              -> { token }
+POST /transfers/p2p     { idempotencyKey, toUserId, amountPaisa }         (Bearer)
+POST /wallet/add-money  { idempotencyKey, bankRef, amountPaisa }          (Bearer)  -- saga
 ```
 
 ## Load testing & benchmark
