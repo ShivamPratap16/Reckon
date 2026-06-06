@@ -58,6 +58,8 @@ pessimistic: 307ms   651 tps  ok=200
 optimistic : 1343ms  149 tps  ok=199  avgAttempts=2.89
 ```
 
+> Note: these throughput numbers are indicative and host-dependent — they vary by machine (CPU, disk, JVM warmup, etc.).
+
 **Trade-off:** The pessimistic strategy (FOR NO KEY UPDATE) serializes writers on each row, giving stable throughput under load with zero retries. The optimistic strategy (version CAS + bounded retry) avoids row locks but spends time on retries under contention (2.89 attempts per successful transfer on an 8-account hot set). For a typical wallet, where each user's transfers serialize naturally on their own row, the contention profile is far lower than the benchmark hot set. The hot-account serialization bottleneck (e.g. a popular merchant or top-up system account) is a known limitation — entry sharding (multiple sub-accounts summed by reconciliation) is the standard mitigation and is deferred as future work.
 
 ### k6 HTTP load test (run on this machine)
