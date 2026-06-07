@@ -1,0 +1,30 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+# Relax specific rules for Spring Boot application patterns
+exceptions:
+  TooGenericExceptionCaught:
+    active: false  # Intentional in saga/recovery/chaos paths where catching Exception is correct
+
+complexity:
+  LongMethod:
+    threshold: 80  # Some integration test setups and saga orchestration are legitimately longer
+  LongParameterList:
+    functionThreshold: 8  # Spring beans often have many injected dependencies
+    constructorThreshold: 8
+  CyclomaticComplexMethod:
+    threshold: 20  # Some recovery/routing logic is legitimately complex
+
+style:
+  MagicNumber:
+    active: false  # Tests legitimately use numeric literals
+  MaxLineLength:
+    active: false  # Handled by ktlint/spotless
+  WildcardImport:
+    active: false  # Handled by ktlint/spotless
+  ReturnCount:
+    max: 5  # Some service methods have early-return guard clauses

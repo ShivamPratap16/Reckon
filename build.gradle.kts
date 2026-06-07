@@ -5,6 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.6"
     jacoco
     id("com.diffplug.spotless") version "6.25.0"
+    id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
 group = "com.reckon"
@@ -81,6 +82,12 @@ tasks.jacocoTestCoverageVerification {
     }
 }
 tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
+
+detekt {
+    buildUponDefaultConfig = true
+    baseline = file("config/detekt/baseline.xml")
+    config.setFrom(files("config/detekt/detekt.yml"))
+}
 
 spotless {
     kotlin {
