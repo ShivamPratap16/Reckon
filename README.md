@@ -198,3 +198,71 @@ POST /payments/{holdId}/void
 **Faults injected:**
 - **Latency toxic** (`+200 ms downstream`): transfers must still succeed and stay consistent.
 - **`resetPeer` toxic** (cuts connections after ~100–120 ms): Postgres rolls back any mid-flight transaction; the app catches the exception and counts it failed; no partial debit/credit survives.
+
+---
+
+## Observability (Plan 12)
+
+Reckon ships with production-grade observability: Prometheus metrics, OpenTelemetry distributed tracing, and correlation IDs threaded through every log line.
+
+### Custom Prometheus metrics
+
+| Metric | Type | Labels | Description |
+|--------|------|--------|-------------|
+| `reckon_transfers_total` | Counter | `type`, `outcome` | Every call to `recordTransfer`, tagged with outcome: `COMPLETED`, `REPLAYED`, `FAILED` |
+| `reckon_transfer_duration_seconds` | Histogram | — | End-to-end duration of each transfer; publishes p50, p95, p99 percentiles |
+
+Exposed at `/actuator/prometheus` (no authentication required — safe for Prometheus scraping).
+
+Verification in tests: `MetricsTest` does a real transfer, then asserts the counter is `>= 1.0` in the registry AND that `reckon_transfers` and `reckon_transfer_duration` appear in the raw Prometheus text at `/actuator/prometheus`.
+
+### Distributed tracing (OpenTelemetry)
+
+Each call to `LedgerService.recordTransfer` is wrapped in a Micrometer tracing span named `reckon.transfer`, tagged with `type` (P2P, ADD_MONEY, CASHBACK, …). Spans are exported via OTLP.
+
+**Configuration:**
+- Sampling: 100% (`management.tracing.sampling.probability=1.0`)
+- OTLP endpoint: `OTEL_EXPORTER_OTLP_ENDPOINT` env var (empty → no export; collector not required)
+- In tests/local dev: no collector needed — context loads and tracing no-ops cleanly
+
+`TracingTest` verifies the `Tracer` bean is auto-configured and that a full transfer runs cleanly within a span without throwing.
+
+### Correlation IDs
+
+Every HTTP request gets a correlation ID:
+- If `X-Correlation-Id` is present in the request headers, that value is used
+- Otherwise, a UUID is generated
+- The ID is set in MDC (`correlationId`) so it appears in every log line for the request
+- The ID is echoed back in the `X-Correlation-Id` response header
+
+Log pattern (via `logback-spring.xml`):
+```
+HH:mm:ss.SSS LEVEL [corr=<id> trace=<traceId> span=<spanId>] logger - message
+```
+
+`CorrelationIdFilterTest` verifies both the echo-back and the generation cases.
+
+### Running the Prometheus + Grafana stack
+
+```bash
+# 1. Start the app on port 8080 (default)
+./gradlew bootRun
+
+# 2. In another terminal, start Prometheus + Grafana
+docker compose -f observability/docker-compose.observability.yml up
+
+# 3. Open Grafana at http://localhost:3000
+#    (anonymous access, no login required)
+#    The "Reckon — Wallet Observability" dashboard is pre-loaded.
+
+# 4. Prometheus UI at http://localhost:9090
+#    Query: reckon_transfers_total
+```
+
+The Grafana dashboard (`observability/grafana-dashboard-reckon.json`) includes four panels:
+- **Transfer Rate** — `rate(reckon_transfers_total[1m])` by outcome
+- **Transfer Latency** — p50 / p95 / p99 from the histogram
+- **JVM Heap Memory** — used vs max
+- **Transfer Volume (1h)** — cumulative by outcome
+
+> Screenshot: add after running locally with real traffic.
