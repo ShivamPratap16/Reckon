@@ -4,6 +4,7 @@ import com.reckon.account.AccountRepository
 import com.reckon.account.SystemAccounts
 import com.reckon.bank.BankResult
 import com.reckon.bank.BankTimeoutException
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
 import com.reckon.bank.SimulatedBank
 import com.reckon.ledger.*
 import com.reckon.platform.ApiException
@@ -45,6 +46,9 @@ class AddMoneyService(
         // Step 2 (remote): idempotent bank debit
         val result = try {
             bank.debit(txnId, bankRef, amount)
+        } catch (e: CallNotPermittedException) {
+            // breaker open: bank not contacted, nothing charged -> leave BANK_PENDING for recovery
+            return TransferOutcome(txnId, "PENDING", replayed = false)
         } catch (e: BankTimeoutException) {
             // leave BANK_PENDING — recovery will reconcile against the bank
             return TransferOutcome(txnId, "PENDING", replayed = false)
