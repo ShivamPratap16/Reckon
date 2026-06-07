@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring") version "2.0.21"
     id("org.springframework.boot") version "3.3.5"
     id("io.spring.dependency-management") version "1.1.6"
+    jacoco
 }
 
 group = "com.reckon"
@@ -56,3 +57,23 @@ tasks.withType<Test> {
     systemProperty("api.version", "1.44")
 }
 kotlin { compilerOptions { freeCompilerArgs.add("-Xjsr305=strict") } }
+
+jacoco { toolVersion = "0.8.12" }
+
+tasks.test { finalizedBy(tasks.jacocoTestReport) }
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit { counter = "LINE"; minimum = "0.75".toBigDecimal() }
+        }
+    }
+}
+tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
