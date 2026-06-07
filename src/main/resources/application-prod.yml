@@ -1,0 +1,20 @@
+# Production profile — activated via SPRING_PROFILES_ACTIVE=prod
+#
+# All secrets and infrastructure coordinates are supplied via environment variables:
+#   JWT_SECRET        — REQUIRED; must not be the dev default (app refuses to boot if omitted)
+#   DB_URL            — e.g. jdbc:postgresql://db:5432/reckon
+#   DB_USER / DB_PASSWORD
+#   KAFKA_BOOTSTRAP   — e.g. kafka:9092
+#   REDIS_HOST        — e.g. redis
+#   OTEL_EXPORTER_OTLP_ENDPOINT — optional; leave blank to skip trace export
+
+logging:
+  level:
+    root: INFO
+    com.reckon: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+spring:
+  jpa:
+    open-in-view: false
