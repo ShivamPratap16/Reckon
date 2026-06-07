@@ -18,7 +18,7 @@ All seven phases of the design are implemented and tested (**63 tests**, Testcon
 6. Scheduled **reconciliation** jobs — sum-to-zero, balance integrity, stuck-PENDING
 7. k6 load test + pessimistic-vs-optimistic locking **benchmark**
 
-Full design in [`docs/superpowers/specs`](docs/superpowers/specs); staged implementation plans in [`docs/superpowers/plans`](docs/superpowers/plans).
+Full design in [`docs/design/specs`](docs/design/specs); staged implementation plans in [`docs/design/plans`](docs/design/plans).
 
 ## Architecture
 
@@ -132,7 +132,7 @@ To run it yourself: `./loadtest/run.sh` (requires Docker + k6).
 
 ## Design docs
 
-The full design — including the failure-mode reasoning behind idempotency replay, the system-account sign convention, the outbox delivery guarantees, and the recovery-vs-slow-request race — lives in [`docs/superpowers/specs`](docs/superpowers/specs) and the staged implementation plan in [`docs/superpowers/plans`](docs/superpowers/plans).
+The full design — including the failure-mode reasoning behind idempotency replay, the system-account sign convention, the outbox delivery guarantees, and the recovery-vs-slow-request race — lives in [`docs/design/specs`](docs/design/specs) and the staged implementation plan in [`docs/design/plans`](docs/design/plans).
 
 ## Property-based invariant testing
 
