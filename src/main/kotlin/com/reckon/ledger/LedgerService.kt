@@ -4,6 +4,8 @@ import com.reckon.account.SystemAccounts
 import com.reckon.idempotency.CachedResult
 import com.reckon.idempotency.IdempotencyCache
 import com.reckon.platform.ApiException
+import com.reckon.platform.Metrics
+import io.micrometer.tracing.Tracer
 import org.springframework.dao.DuplicateKeyException
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -15,6 +17,8 @@ class LedgerService(
     private val executor: TransferExecutor,
     private val statusWriter: TxnStatusWriter,
     private val cache: IdempotencyCache,
+    private val metrics: Metrics,
+    private val tracer: Tracer,
 ) {
     /**
      * The ONLY money-writer for transfers. NOT itself @Transactional — it inserts the PENDING
@@ -26,6 +30,26 @@ class LedgerService(
         type: TxnType, idempotencyKey: String, requestHash: String,
         initiatorId: UUID, from: UUID, to: UUID, amount: Long,
     ): TransferOutcome {
+        val span = tracer.nextSpan().name("reckon.transfer").tag("type", type.name).start()
+        return try {
+            tracer.withSpan(span).use {
+                metrics.timeTransfer {
+                    recordTransferInternal(type, idempotencyKey, requestHash, initiatorId, from, to, amount)
+                }
+            }
+        } catch (e: Exception) {
+            metrics.transfer(type.name, "FAILED")
+            span.tag("error", e.javaClass.simpleName)
+            throw e
+        } finally {
+            span.end()
+        }
+    }
+
+    private fun recordTransferInternal(
+        type: TxnType, idempotencyKey: String, requestHash: String,
+        initiatorId: UUID, from: UUID, to: UUID, amount: Long,
+    ): TransferOutcome {
         if (amount <= 0) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_TRANSFER", "amount must be positive")
         if (from == to) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_TRANSFER", "cannot transfer to self")
 
@@ -34,16 +58,24 @@ class LedgerService(
             if (cached.requestHash != requestHash)
                 throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "IDEMPOTENCY_KEY_REUSE", "key reused with different request")
             return when (cached.status) {
-                "COMPLETED" -> TransferOutcome(cached.transactionId, "COMPLETED", replayed = true)
+                "COMPLETED" -> {
+                    metrics.transfer(type.name, "REPLAYED")
+                    TransferOutcome(cached.transactionId, "COMPLETED", replayed = true)
+                }
                 "FAILED"    -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, cached.failureCode ?: "FAILED", "replayed prior failure")
-                else        -> TransferOutcome(cached.transactionId, cached.status, replayed = true)
+                else        -> {
+                    metrics.transfer(type.name, "REPLAYED")
+                    TransferOutcome(cached.transactionId, cached.status, replayed = true)
+                }
             }
         }
 
         val txnId = try {
             ledger.insertPending(type, idempotencyKey, requestHash, amount, initiatorId, from, to)
         } catch (e: DuplicateKeyException) {
-            return replay(initiatorId, idempotencyKey, requestHash)   // DB-authoritative; replay() also warms the cache
+            val result = replay(initiatorId, idempotencyKey, requestHash)   // DB-authoritative; replay() also warms the cache
+            metrics.transfer(type.name, "REPLAYED")
+            return result
         }
 
         try {
@@ -58,6 +90,7 @@ class LedgerService(
         }
         ledger.storeResponse(txnId, 200, """{"transactionId":"$txnId","status":"COMPLETED"}""")
         cache.put(initiatorId, idempotencyKey, CachedResult(txnId, "COMPLETED", requestHash, null))
+        metrics.transfer(type.name, "COMPLETED")
         return TransferOutcome(txnId, "COMPLETED", replayed = false)
     }
 
