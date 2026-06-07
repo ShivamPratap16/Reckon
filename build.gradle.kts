@@ -40,6 +40,11 @@ dependencies {
     testImplementation("org.springframework.kafka:spring-kafka-test")
 
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+
+    implementation("io.micrometer:micrometer-registry-prometheus")
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:1.43.0")
 }
 
 ext["testcontainers.version"] = "1.20.4"
