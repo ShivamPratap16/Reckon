@@ -176,3 +176,25 @@ POST /payments/authorize          { idempotencyKey, toUserId, amountPaisa, ttlSe
 POST /payments/{holdId}/capture   { amountPaisa? }    -- null = full capture
 POST /payments/{holdId}/void
 ```
+
+## Chaos testing (Plan 11)
+
+`TransferChaosTest` and `SagaChaosTest` use [Toxiproxy](https://github.com/Shopify/toxiproxy) to inject network faults between the app and PostgreSQL and then assert that money invariants hold.
+
+**Architecture:** A `ToxiproxyContainer` and a `PostgreSQLContainer` share a Docker `Network`. Spring's datasource URL points at the Toxiproxy mapped port, not Postgres directly. Flyway runs through the proxy at context startup with no toxics active. Tests add toxics via `ChaosTestBase.pgProxy` and remove them in `@AfterEach`.
+
+**Why Postgres, not Kafka:** The core money guarantees live in Postgres transactions. Proxying Postgres lets us prove the strongest property — **atomicity under connection failure**. Kafka advertised-listener proxying is unreliable (Kafka clients reconnect directly, bypassing the proxy).
+
+**Invariants verified under chaos:**
+
+| Invariant | Test |
+|-----------|------|
+| `balance(a) == seed(a) + SUM(ledger_entries)` | `TransferChaosTest` — both transfer tests |
+| Money conserved: `balance(a) + balance(b) == 1,000,000` | atomicity test |
+| `balance(b) == 1000 × successCount` — every transfer all-or-nothing | atomicity test |
+| Every wallet ends `0` or `50,000` (never partial) | `SagaChaosTest` |
+| Reconciliation clean (no balance drift for chaos wallets) | `SagaChaosTest` |
+
+**Faults injected:**
+- **Latency toxic** (`+200 ms downstream`): transfers must still succeed and stay consistent.
+- **`resetPeer` toxic** (cuts connections after ~100–120 ms): Postgres rolls back any mid-flight transaction; the app catches the exception and counts it failed; no partial debit/credit survives.
