@@ -14,20 +14,25 @@ import kotlin.test.assertTrue
 
 class LedgerConcurrencyTest : PostgresTestBase() {
     @Autowired lateinit var ledger: LedgerService
+
     @Autowired lateinit var fixtures: Fixtures
+
     @Autowired lateinit var repo: LedgerRepository
+
     @Autowired lateinit var jdbc: JdbcTemplate
 
     @Test fun `100 concurrent debits never overdraw and conserve money`() {
         // Fund account a with exactly 10 transfers worth of balance (10 × 100 = 1000)
         // then fire 20 attempts: exactly 10 should succeed, 10 should be INSUFFICIENT_FUNDS.
-        val a = fixtures.walletWith(1000)   // funds exactly 10 transfers of 100
+        val a = fixtures.walletWith(1000) // funds exactly 10 transfers of 100
         val b = fixtures.walletWith(0)
         val pool = Executors.newFixedThreadPool(8)
-        val ok = AtomicInteger(0); val failed = AtomicInteger(0)
+        val ok = AtomicInteger(0)
+        val failed = AtomicInteger(0)
         val allExceptions = CopyOnWriteArrayList<Pair<Int, Throwable>>()
 
-        val tasks = (1..20).map { i ->   // 20 attempts on a balance that funds only 10
+        val tasks = (1..20).map { i ->
+            // 20 attempts on a balance that funds only 10
             Runnable {
                 try {
                     ledger.recordTransfer(TxnType.P2P, "c$i", "h$i", UUID.randomUUID(), a, b, 100)
@@ -39,7 +44,8 @@ class LedgerConcurrencyTest : PostgresTestBase() {
             }
         }
         tasks.forEach { pool.submit(it) }
-        pool.shutdown(); pool.awaitTermination(120, java.util.concurrent.TimeUnit.SECONDS)
+        pool.shutdown()
+        pool.awaitTermination(120, java.util.concurrent.TimeUnit.SECONDS)
 
         val successCount = ok.get()
         val insufficientFunds = allExceptions.count { (_, e) ->
@@ -71,32 +77,44 @@ class LedgerConcurrencyTest : PostgresTestBase() {
 
         // Exactly 2 entries per successful transfer — no orphaned entries from failed attempts
         val entriesForTheseAccounts = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM ledger_entries WHERE account_id IN (?, ?)", Long::class.java, a, b)!!
+            "SELECT COUNT(*) FROM ledger_entries WHERE account_id IN (?, ?)",
+            Long::class.java,
+            a,
+            b,
+        )!!
         assertEquals(2L * successCount, entriesForTheseAccounts, "orphaned ledger entries found")
 
         // Every transfer that committed should be counted as ok (no unexpected errors)
         val committedCount = (movedAmount / 100).toInt()
-        assertEquals(committedCount, successCount,
-            "unexpected errors caused valid transfers to be counted as failures: ${unexpectedExceptions.map { (i, e) -> "task$i: ${e.javaClass.simpleName}(${e.message})" }}")
-        assertEquals(10, committedCount,
-            "wrong number of transfers committed — only $committedCount succeeded instead of 10")
+        assertEquals(
+            committedCount,
+            successCount,
+            "unexpected errors caused valid transfers to be counted as failures: ${unexpectedExceptions.map { (i, e) ->
+                "task$i: ${e.javaClass.simpleName}(${e.message})"
+            }}",
+        )
+        assertEquals(
+            10,
+            committedCount,
+            "wrong number of transfers committed — only $committedCount succeeded instead of 10",
+        )
     }
 
     @Test fun `bidirectional concurrent transfers do not deadlock and conserve money`() {
-        val a = fixtures.walletWith(100000)   // both well-funded so few/no INSUFFICIENT_FUNDS
+        val a = fixtures.walletWith(100000) // both well-funded so few/no INSUFFICIENT_FUNDS
         val b = fixtures.walletWith(100000)
         val pool = java.util.concurrent.Executors.newFixedThreadPool(16)
         val errors = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
         val tasks = (1..200).map { i ->
             Runnable {
-                val (from, to) = if (i % 2 == 0) a to b else b to a   // half A->B, half B->A
+                val (from, to) = if (i % 2 == 0) a to b else b to a // half A->B, half B->A
                 try {
                     ledger.recordTransfer(TxnType.P2P, "bidi-$i", "h$i", java.util.UUID.randomUUID(), from, to, 100)
                 } catch (e: com.reckon.platform.ApiException) {
                     if (e.code != "INSUFFICIENT_FUNDS") errors.add("${e.code}: ${e.message}")
                 } catch (e: Exception) {
-                    errors.add(e.javaClass.simpleName + ": " + e.message)   // a deadlock would surface here
+                    errors.add(e.javaClass.simpleName + ": " + e.message) // a deadlock would surface here
                 }
             }
         }

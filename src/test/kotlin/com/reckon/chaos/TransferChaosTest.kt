@@ -11,11 +11,12 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class TransferChaosTest : ChaosTestBase() {
     @Autowired lateinit var ledger: LedgerService
+
     @Autowired lateinit var ledgerRepo: LedgerRepository
+
     @Autowired lateinit var fixtures: Fixtures
 
     @AfterEach
@@ -30,9 +31,13 @@ class TransferChaosTest : ChaosTestBase() {
         // +200ms downstream latency — transfers should still succeed
         pgProxy.toxics().latency("lat", ToxicDirection.DOWNSTREAM, 200)
         ledger.recordTransfer(
-            TxnType.P2P, "chaos-lat",
+            TxnType.P2P,
+            "chaos-lat",
             RequestHash.of("P2P", a, b, 20000),
-            UUID.randomUUID(), a, b, 20000
+            UUID.randomUUID(),
+            a,
+            b,
+            20000,
         )
         assertEquals(30000, fixtures.balanceOf(a))
         assertEquals(20000, fixtures.balanceOf(b))
@@ -57,9 +62,13 @@ class TransferChaosTest : ChaosTestBase() {
             }
             try {
                 ledger.recordTransfer(
-                    TxnType.P2P, "chaos-$i",
+                    TxnType.P2P,
+                    "chaos-$i",
                     RequestHash.of("P2P", a, b, i.toLong()),
-                    UUID.randomUUID(), a, b, 1000
+                    UUID.randomUUID(),
+                    a,
+                    b,
+                    1000,
                 )
                 ok++
             } catch (e: Exception) {
@@ -73,20 +82,24 @@ class TransferChaosTest : ChaosTestBase() {
         // a was seeded at 1_000_000 so: balance(a) == 1_000_000 + sumEntries(a)
         // b was seeded at 0 so: balance(b) == sumEntries(b)
         assertEquals(
-            1_000_000L + ledgerRepo.sumEntries(a), fixtures.balanceOf(a),
-            "account a balance != seed + sum(entries) after chaos"
+            1_000_000L + ledgerRepo.sumEntries(a),
+            fixtures.balanceOf(a),
+            "account a balance != seed + sum(entries) after chaos",
         )
         assertEquals(
-            ledgerRepo.sumEntries(b), fixtures.balanceOf(b),
-            "account b balance != sum(entries) after chaos"
+            ledgerRepo.sumEntries(b),
+            fixtures.balanceOf(b),
+            "account b balance != sum(entries) after chaos",
         )
         assertEquals(
-            1_000_000L, fixtures.balanceOf(a) + fixtures.balanceOf(b),
-            "money not conserved under chaos"
+            1_000_000L,
+            fixtures.balanceOf(a) + fixtures.balanceOf(b),
+            "money not conserved under chaos",
         )
         assertEquals(
-            1000L * ok, fixtures.balanceOf(b),
-            "b should hold exactly the successful transfers (all-or-nothing atomicity)"
+            1000L * ok,
+            fixtures.balanceOf(b),
+            "b should hold exactly the successful transfers (all-or-nothing atomicity)",
         )
     }
 }

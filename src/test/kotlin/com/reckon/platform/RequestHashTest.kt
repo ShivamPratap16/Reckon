@@ -12,9 +12,11 @@ class RequestHashTest {
     @Test fun `same inputs produce same hash`() {
         assertEquals(RequestHash.of("P2P", a, b, 100), RequestHash.of("P2P", a, b, 100))
     }
+
     @Test fun `different amount produces different hash`() {
         assertNotEquals(RequestHash.of("P2P", a, b, 100), RequestHash.of("P2P", a, b, 200))
     }
+
     @Test fun `is stable hex string (deterministic across calls)`() {
         // SHA-256 hex is 64 chars
         assertEquals(64, RequestHash.of("P2P", a, b, 100).length)

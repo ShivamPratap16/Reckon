@@ -16,14 +16,9 @@ import java.util.UUID
  * from LedgerService (a same-bean self-call would silently bypass the proxy).
  */
 @Service
-class TransferExecutor(
-    private val accounts: AccountRepository,
-    private val ledger: LedgerRepository,
-    private val outbox: OutboxRepository,
-) {
+class TransferExecutor(private val accounts: AccountRepository, private val ledger: LedgerRepository, private val outbox: OutboxRepository) {
     @Transactional
-    fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long,
-                emitEvent: Boolean = true, sagaGuard: Boolean = false) {
+    fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long, emitEvent: Boolean = true, sagaGuard: Boolean = false) {
         // lock both rows in fixed id order (deadlock-safe); lock is held for the whole txn
         val locked = accounts.lockByIdsInOrder(listOf(from, to)).associateBy { it.id }
         val src = locked[from] ?: error("source account not found: $from")

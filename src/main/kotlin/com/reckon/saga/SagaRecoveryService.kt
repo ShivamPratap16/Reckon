@@ -1,11 +1,11 @@
 package com.reckon.saga
 
+import com.reckon.account.SystemAccounts
 import com.reckon.bank.BankStatus
 import com.reckon.bank.SimulatedBank
 import com.reckon.ledger.LedgerRepository
 import com.reckon.ledger.TransferExecutor
 import com.reckon.ledger.TxnType
-import com.reckon.account.SystemAccounts
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -74,10 +74,19 @@ class SagaRecoveryService(
     private fun completeStep3(txnId: java.util.UUID) {
         val wallet = ledger.toAccountOf(txnId)
         val amount = ledger.amountOf(txnId)
-        executor.execute(txnId, TxnType.ADD_MONEY, SystemAccounts.BANK_SETTLEMENT, wallet, amount,
-            emitEvent = true, sagaGuard = true)
+        executor.execute(
+            txnId,
+            TxnType.ADD_MONEY,
+            SystemAccounts.BANK_SETTLEMENT,
+            wallet,
+            amount,
+            emitEvent = true,
+            sagaGuard = true,
+        )
     }
 
     @Scheduled(fixedDelayString = "\${reckon.saga.recovery.poll-ms:5000}")
-    fun scheduled() { if (enabled) recover() }
+    fun scheduled() {
+        if (enabled) recover()
+    }
 }

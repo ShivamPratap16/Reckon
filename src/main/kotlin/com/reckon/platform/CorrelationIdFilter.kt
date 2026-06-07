@@ -20,6 +20,10 @@ class CorrelationIdFilter : OncePerRequestFilter() {
         val correlationId = req.getHeader(CORRELATION_ID_HEADER)?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
         MDC.put(CORRELATION_ID_MDC, correlationId)
         res.setHeader(CORRELATION_ID_HEADER, correlationId)
-        try { chain.doFilter(req, res) } finally { MDC.remove(CORRELATION_ID_MDC) }
+        try {
+            chain.doFilter(req, res)
+        } finally {
+            MDC.remove(CORRELATION_ID_MDC)
+        }
     }
 }

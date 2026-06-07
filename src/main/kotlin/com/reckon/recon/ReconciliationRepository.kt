@@ -34,7 +34,8 @@ class ReconciliationRepository(private val jdbc: JdbcTemplate) {
                   COALESCE((SELECT SUM(h.amount) FROM holds h WHERE h.payer_account_id = a.id AND h.status='HELD'),0) AS computed
            FROM accounts a
            WHERE a.reserved_balance <> COALESCE((SELECT SUM(h.amount) FROM holds h WHERE h.payer_account_id=a.id AND h.status='HELD'),0)""",
-        { rs, _ -> ReservedDrift(rs.getObject("id", java.util.UUID::class.java), rs.getLong("reserved_balance"), rs.getLong("computed")) })
+        { rs, _ -> ReservedDrift(rs.getObject("id", java.util.UUID::class.java), rs.getLong("reserved_balance"), rs.getLong("computed")) },
+    )
 
     /** Transactions stuck in PENDING with no entries, older than the given window. */
     fun findStuckPending(staleSeconds: Long): List<UUID> = jdbc.query(
@@ -42,6 +43,7 @@ class ReconciliationRepository(private val jdbc: JdbcTemplate) {
            WHERE t.status = 'PENDING'
              AND NOT EXISTS (SELECT 1 FROM ledger_entries le WHERE le.transaction_id = t.id)
              AND t.created_at < now() - make_interval(secs => ?)""",
-        { rs, _ -> rs.getObject("id", UUID::class.java) }, staleSeconds.toDouble(),
+        { rs, _ -> rs.getObject("id", UUID::class.java) },
+        staleSeconds.toDouble(),
     )
 }

@@ -13,8 +13,11 @@ import kotlin.test.assertEquals
 @TestPropertySource(properties = ["reckon.consumers.enabled=true"])
 class PoisonMessageTest : KafkaPostgresTestBase() {
     @Autowired lateinit var kafka: KafkaTemplate<String, String>
+
     @Autowired lateinit var fixtures: Fixtures
-    @Value("\${reckon.outbox.topic}") lateinit var topic: String
+
+    @Value("\${reckon.outbox.topic}")
+    lateinit var topic: String
 
     @Test fun `a malformed message does not block a subsequent valid one`() {
         val payer = fixtures.walletWith(0)
@@ -33,6 +36,6 @@ class PoisonMessageTest : KafkaPostgresTestBase() {
             if (balance == 500L) break
             Thread.sleep(250)
         }
-        assertEquals(500L, balance)   // poison was DLT'd / skipped, partition not blocked
+        assertEquals(500L, balance) // poison was DLT'd / skipped, partition not blocked
     }
 }

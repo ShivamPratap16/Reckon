@@ -19,14 +19,23 @@ class SimulatedBank {
     private val ledger = ConcurrentHashMap<UUID, State>()
 
     fun debit(transactionId: UUID, bankRef: String, amountPaisa: Long): BankResult {
-        ledger[transactionId]?.let {                      // idempotent: already seen this txn
+        ledger[transactionId]?.let {
+            // idempotent: already seen this txn
             return if (it == State.CHARGED) BankResult.CHARGED else BankResult.DECLINED
         }
         return when (bankRef) {
-            "BANK_DECLINE" -> { ledger[transactionId] = State.DECLINED; BankResult.DECLINED }
-            "BANK_TIMEOUT" -> { ledger[transactionId] = State.CHARGED   // charged, but caller won't hear back
-                                throw BankTimeoutException("no response from bank for $transactionId") }
-            else -> { ledger[transactionId] = State.CHARGED; BankResult.CHARGED }
+            "BANK_DECLINE" -> {
+                ledger[transactionId] = State.DECLINED
+                BankResult.DECLINED
+            }
+            "BANK_TIMEOUT" -> {
+                ledger[transactionId] = State.CHARGED // charged, but caller won't hear back
+                throw BankTimeoutException("no response from bank for $transactionId")
+            }
+            else -> {
+                ledger[transactionId] = State.CHARGED
+                BankResult.CHARGED
+            }
         }
     }
 
@@ -37,5 +46,7 @@ class SimulatedBank {
     }
 
     /** Compensating action. */
-    fun refund(transactionId: UUID) { ledger.remove(transactionId) }
+    fun refund(transactionId: UUID) {
+        ledger.remove(transactionId)
+    }
 }

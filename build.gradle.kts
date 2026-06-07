@@ -4,6 +4,7 @@ plugins {
     id("org.springframework.boot") version "3.3.5"
     id("io.spring.dependency-management") version "1.1.6"
     jacoco
+    id("com.diffplug.spotless") version "6.25.0"
 }
 
 group = "com.reckon"
@@ -72,8 +73,29 @@ tasks.jacocoTestReport {
 tasks.jacocoTestCoverageVerification {
     violationRules {
         rule {
-            limit { counter = "LINE"; minimum = "0.75".toBigDecimal() }
+            limit {
+                counter = "LINE"
+                minimum = "0.75".toBigDecimal()
+            }
         }
     }
 }
 tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint("1.3.1").editorConfigOverride(
+            mapOf(
+                "ktlint_standard_no-wildcard-imports" to "disabled",
+                "ktlint_standard_filename" to "disabled",
+                "ktlint_standard_property-naming" to "disabled",
+                "max_line_length" to "160",
+            ),
+        )
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint("1.3.1")
+    }
+}

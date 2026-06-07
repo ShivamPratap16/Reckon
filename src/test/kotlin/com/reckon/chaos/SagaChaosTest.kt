@@ -15,9 +15,13 @@ import kotlin.test.assertTrue
 
 class SagaChaosTest : ChaosTestBase() {
     @Autowired lateinit var saga: AddMoneyService
+
     @Autowired lateinit var recovery: SagaRecoveryService
+
     @Autowired lateinit var recon: ReconciliationService
+
     @Autowired lateinit var ledgerRepo: LedgerRepository
+
     @Autowired lateinit var fixtures: Fixtures
 
     @AfterEach
@@ -49,8 +53,9 @@ class SagaChaosTest : ChaosTestBase() {
         // INVARIANT: every wallet must be consistent — balance == sum(entries), never partial
         wallets.forEach { w ->
             assertEquals(
-                ledgerRepo.sumEntries(w), fixtures.balanceOf(w),
-                "balance != sum(entries) for wallet $w"
+                ledgerRepo.sumEntries(w),
+                fixtures.balanceOf(w),
+                "balance != sum(entries) for wallet $w",
             )
             val bal = fixtures.balanceOf(w)
             assertTrue(bal == 0L || bal == 50000L, "wallet $w has a partial balance: $bal")

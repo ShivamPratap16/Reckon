@@ -22,5 +22,7 @@ class OutboxPublisher(
     }
 
     @Scheduled(fixedDelayString = "\${reckon.outbox.poll-ms:1000}")
-    fun scheduledPublish() { if (schedulerEnabled) publishBatch() }
+    fun scheduledPublish() {
+        if (schedulerEnabled) publishBatch()
+    }
 }

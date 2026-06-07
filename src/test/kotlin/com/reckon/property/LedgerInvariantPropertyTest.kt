@@ -2,7 +2,6 @@ package com.reckon.property
 
 import com.reckon.account.AccountRepository
 import com.reckon.hold.AuthorizationService
-import com.reckon.hold.HoldStatus
 import com.reckon.ledger.LedgerRepository
 import com.reckon.ledger.LedgerService
 import com.reckon.ledger.TxnType
@@ -20,11 +19,17 @@ import kotlin.test.assertTrue
 
 class LedgerInvariantPropertyTest : PostgresTestBase() {
     @Autowired lateinit var saga: AddMoneyService
+
     @Autowired lateinit var ledger: LedgerService
+
     @Autowired lateinit var ledgerRepo: LedgerRepository
+
     @Autowired lateinit var auth: AuthorizationService
+
     @Autowired lateinit var accounts: AccountRepository
+
     @Autowired lateinit var fixtures: Fixtures
+
     @Autowired lateinit var jdbc: JdbcTemplate
 
     private val NUM_ACCOUNTS = 5
@@ -33,7 +38,10 @@ class LedgerInvariantPropertyTest : PostgresTestBase() {
     private fun balance(id: UUID) = fixtures.balanceOf(id)
     private fun reserved(id: UUID) = jdbc.queryForObject("SELECT reserved_balance FROM accounts WHERE id=?", Long::class.java, id)!!
     private fun heldSum(id: UUID) = jdbc.queryForObject(
-        "SELECT COALESCE(SUM(amount),0) FROM holds WHERE payer_account_id=? AND status='HELD'", Long::class.java, id)!!
+        "SELECT COALESCE(SUM(amount),0) FROM holds WHERE payer_account_id=? AND status='HELD'",
+        Long::class.java,
+        id,
+    )!!
 
     /** Run a randomized sequence of mixed operations, then assert the invariants for THIS run's accounts. */
     private fun runRandomSequence(seed: Long) {
@@ -43,28 +51,37 @@ class LedgerInvariantPropertyTest : PostgresTestBase() {
         wallets.forEach { w ->
             saga.addMoney("prop-fund-$seed-${UUID.randomUUID()}", UUID.randomUUID(), w, "ref", (rnd.nextLong(5, 50) * 10_000))
         }
-        val heldHolds = ArrayDeque<UUID>()   // hold ids currently HELD (best-effort; may be stale, hence try/catch)
+        val heldHolds = ArrayDeque<UUID>() // hold ids currently HELD (best-effort; may be stale, hence try/catch)
 
         repeat(NUM_OPS) {
             try {
                 when (rnd.nextInt(5)) {
-                    0, 1 -> {  // P2P transfer
-                        val from = wallets.random(rnd); val to = wallets.filter { it != from }.random(rnd)
-                        ledger.recordTransfer(TxnType.P2P, "p-${UUID.randomUUID()}",
-                            RequestHash.of("P2P", from, to, 1), UUID.randomUUID(), from, to, rnd.nextLong(1, 30_000))
+                    0, 1 -> { // P2P transfer
+                        val from = wallets.random(rnd)
+                        val to = wallets.filter { it != from }.random(rnd)
+                        ledger.recordTransfer(
+                            TxnType.P2P,
+                            "p-${UUID.randomUUID()}",
+                            RequestHash.of("P2P", from, to, 1),
+                            UUID.randomUUID(),
+                            from,
+                            to,
+                            rnd.nextLong(1, 30_000),
+                        )
                     }
-                    2 -> {  // authorize a hold
-                        val from = wallets.random(rnd); val to = wallets.filter { it != from }.random(rnd)
+                    2 -> { // authorize a hold
+                        val from = wallets.random(rnd)
+                        val to = wallets.filter { it != from }.random(rnd)
                         val h = auth.authorize("a-${UUID.randomUUID()}", UUID.randomUUID(), from, to, rnd.nextLong(1, 30_000), 600)
                         heldHolds.addLast(h)
                     }
-                    3 -> {  // capture a held hold (full or partial)
+                    3 -> { // capture a held hold (full or partial)
                         val h = heldHolds.removeFirstOrNull() ?: return@repeat
                         val payer = jdbc.queryForObject("SELECT payer_account_id FROM holds WHERE id=?", UUID::class.java, h)!!
                         val amt = jdbc.queryForObject("SELECT amount FROM holds WHERE id=?", Long::class.java, h)!!
                         auth.capture(h, payer, if (rnd.nextBoolean()) null else (amt / 2).coerceAtLeast(1))
                     }
-                    4 -> {  // void a held hold
+                    4 -> { // void a held hold
                         val h = heldHolds.removeFirstOrNull() ?: return@repeat
                         val payer = jdbc.queryForObject("SELECT payer_account_id FROM holds WHERE id=?", UUID::class.java, h)!!
                         auth.void(h, payer)

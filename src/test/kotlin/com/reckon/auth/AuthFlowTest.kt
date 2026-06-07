@@ -13,21 +13,30 @@ import kotlin.test.assertNotNull
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AuthFlowTest : PostgresTestBase() {
     @Autowired lateinit var rest: TestRestTemplate
+
     @Autowired lateinit var jdbc: JdbcTemplate
 
     @Test fun `signup then login issues tokens and creates wallet`() {
-        val signup = rest.postForEntity("/auth/signup",
-            AuthRequest("a@x.com", "pw123456"), AuthResponse::class.java)
+        val signup = rest.postForEntity(
+            "/auth/signup",
+            AuthRequest("a@x.com", "pw123456"),
+            AuthResponse::class.java,
+        )
         assertEquals(HttpStatus.OK, signup.statusCode)
         assertNotNull(signup.body?.token)
 
         val walletCount = jdbc.queryForObject(
             "SELECT COUNT(*) FROM accounts WHERE owner_id = (SELECT id FROM users WHERE email = ?) AND type = 'USER_WALLET'",
-            Int::class.java, "a@x.com")
+            Int::class.java,
+            "a@x.com",
+        )
         kotlin.test.assertEquals(1, walletCount)
 
-        val login = rest.postForEntity("/auth/login",
-            AuthRequest("a@x.com", "pw123456"), AuthResponse::class.java)
+        val login = rest.postForEntity(
+            "/auth/login",
+            AuthRequest("a@x.com", "pw123456"),
+            AuthResponse::class.java,
+        )
         assertEquals(HttpStatus.OK, login.statusCode)
         assertNotNull(login.body?.token)
     }

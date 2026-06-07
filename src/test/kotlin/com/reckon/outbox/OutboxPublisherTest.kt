@@ -16,15 +16,24 @@ import kotlin.test.assertTrue
 
 class OutboxPublisherTest : KafkaPostgresTestBase() {
     @Autowired lateinit var publisher: OutboxPublisher
+
     @Autowired lateinit var outbox: OutboxRepository
+
     @Autowired lateinit var jdbc: JdbcTemplate
-    @Value("\${spring.kafka.bootstrap-servers}") lateinit var bootstrap: String
-    @Value("\${reckon.outbox.topic}") lateinit var topic: String
+
+    @Value("\${spring.kafka.bootstrap-servers}")
+    lateinit var bootstrap: String
+
+    @Value("\${reckon.outbox.topic}")
+    lateinit var topic: String
 
     @Test fun `publishBatch sends unpublished events to kafka and marks them published`() {
         val aggregate = UUID.randomUUID()
-        outbox.append(aggregate, EventType.PAYMENT_COMPLETED,
-            """{"eventId":null,"transactionId":"$aggregate","status":"COMPLETED"}""")
+        outbox.append(
+            aggregate,
+            EventType.PAYMENT_COMPLETED,
+            """{"eventId":null,"transactionId":"$aggregate","status":"COMPLETED"}""",
+        )
 
         // consumer subscribed before publish
         val props = KafkaTestUtils.consumerProps(bootstrap, "test-group", "true")
@@ -42,13 +51,16 @@ class OutboxPublisherTest : KafkaPostgresTestBase() {
         val matching = records.filter { it.key() == aggregate.toString() }
         assertEquals(1, matching.size)
         val record = matching.first()
-        assertEquals(aggregate.toString(), record.key())                 // partition key = aggregateId
-        assertTrue(record.value().contains("\"eventId\"") && !record.value().contains("null"))  // envelope filled real eventId (not null)
+        assertEquals(aggregate.toString(), record.key()) // partition key = aggregateId
+        assertTrue(record.value().contains("\"eventId\"") && !record.value().contains("null")) // envelope filled real eventId (not null)
 
         // row marked published, won't be re-sent
         val unpublished = jdbc.queryForObject(
-            "SELECT COUNT(*) FROM outbox WHERE aggregate_id = ? AND published = false", Long::class.java, aggregate)
+            "SELECT COUNT(*) FROM outbox WHERE aggregate_id = ? AND published = false",
+            Long::class.java,
+            aggregate,
+        )
         assertEquals(0L, unpublished)
-        assertEquals(0, publisher.publishBatch())                        // nothing left to publish
+        assertEquals(0, publisher.publishBatch()) // nothing left to publish
     }
 }

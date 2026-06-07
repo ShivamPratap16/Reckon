@@ -15,10 +15,14 @@ class HoldExpiryService(
     /** Release reservations for holds past expiry. Each hold released in its own transaction (via cross-bean worker). */
     fun expireDue(now: Instant): Int {
         var n = 0
-        for (hold in holds.findExpired(now, batchSize)) { if (worker.expireOne(hold)) n++ }
+        for (hold in holds.findExpired(now, batchSize)) {
+            if (worker.expireOne(hold)) n++
+        }
         return n
     }
 
     @Scheduled(fixedDelayString = "\${reckon.holds.expiry.poll-ms:30000}")
-    fun scheduled() { if (enabled) expireDue(Instant.now()) }
+    fun scheduled() {
+        if (enabled) expireDue(Instant.now())
+    }
 }

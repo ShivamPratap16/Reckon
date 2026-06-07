@@ -13,9 +13,14 @@ import kotlin.test.assertEquals
 @TestPropertySource(properties = ["reckon.consumers.enabled=true"])
 class ConsumerKafkaE2ETest : KafkaPostgresTestBase() {
     @Autowired lateinit var kafka: KafkaTemplate<String, String>
+
     @Autowired lateinit var fixtures: Fixtures
-    @Autowired lateinit var rewards: RewardsService     // not used directly; ensures context wired
-    @Value("\${reckon.outbox.topic}") lateinit var topic: String
+
+    @Autowired lateinit var rewards: RewardsService
+
+    // not used directly; ensures context wired
+    @Value("\${reckon.outbox.topic}")
+    lateinit var topic: String
 
     @Test fun `payment event published to kafka results in cashback via the consumer`() {
         val payer = fixtures.walletWith(0)
@@ -33,6 +38,6 @@ class ConsumerKafkaE2ETest : KafkaPostgresTestBase() {
             if (balance == 500L) break
             Thread.sleep(250)
         }
-        assertEquals(500L, balance)   // consumer awarded cashback end-to-end
+        assertEquals(500L, balance) // consumer awarded cashback end-to-end
     }
 }

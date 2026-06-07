@@ -27,8 +27,15 @@ class AddMoneyService(
 
         // Step 1 (local): PENDING ADD_MONEY, saga_state=BANK_PENDING [+ idempotency replay]
         val txnId = try {
-            val id = ledger.insertPending(TxnType.ADD_MONEY, idempotencyKey, requestHash, amount,
-                initiatorId, SystemAccounts.BANK_SETTLEMENT, walletId)
+            val id = ledger.insertPending(
+                TxnType.ADD_MONEY,
+                idempotencyKey,
+                requestHash,
+                amount,
+                initiatorId,
+                SystemAccounts.BANK_SETTLEMENT,
+                walletId,
+            )
             ledger.setSagaState(id, "BANK_PENDING")
             id
         } catch (e: DuplicateKeyException) {
@@ -49,20 +56,28 @@ class AddMoneyService(
         ledger.markBankConfirmed(txnId)
 
         // Step 3 (local): credit wallet from settlement, complete (saga guard)
-        executor.execute(txnId, TxnType.ADD_MONEY, SystemAccounts.BANK_SETTLEMENT, walletId, amount,
-            emitEvent = true, sagaGuard = true)
+        executor.execute(
+            txnId,
+            TxnType.ADD_MONEY,
+            SystemAccounts.BANK_SETTLEMENT,
+            walletId,
+            amount,
+            emitEvent = true,
+            sagaGuard = true,
+        )
         return TransferOutcome(txnId, "COMPLETED", replayed = false)
     }
 
     private fun replay(initiatorId: UUID, idempotencyKey: String, requestHash: String): TransferOutcome {
         val existing = ledger.findByInitiatorAndKey(initiatorId, idempotencyKey)
             ?: throw ApiException(HttpStatus.CONFLICT, "IN_PROGRESS", "duplicate key, original not yet visible")
-        if (existing.requestHash != requestHash)
+        if (existing.requestHash != requestHash) {
             throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "IDEMPOTENCY_KEY_REUSE", "key reused with different request")
+        }
         return when (existing.status) {
             "COMPLETED" -> TransferOutcome(existing.id, "COMPLETED", replayed = true)
-            "FAILED"    -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, existing.failureReason ?: "FAILED", "replayed prior failure")
-            else        -> TransferOutcome(existing.id, "PENDING", replayed = true)   // still in flight
+            "FAILED" -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, existing.failureReason ?: "FAILED", "replayed prior failure")
+            else -> TransferOutcome(existing.id, "PENDING", replayed = true) // still in flight
         }
     }
 }

@@ -22,8 +22,13 @@ class ReconciliationService(
             reservedDrifts = repo.findReservedDrifts(),
         )
         if (!report.clean) {
-            log.error("RECONCILIATION FAILED: {} unbalanced txns, {} balance drifts, {} stuck pending, {} reserved drifts",
-                report.unbalancedTransactions.size, report.balanceDrifts.size, report.stuckPending.size, report.reservedDrifts.size)
+            log.error(
+                "RECONCILIATION FAILED: {} unbalanced txns, {} balance drifts, {} stuck pending, {} reserved drifts",
+                report.unbalancedTransactions.size,
+                report.balanceDrifts.size,
+                report.stuckPending.size,
+                report.reservedDrifts.size,
+            )
         } else {
             log.info("Reconciliation clean")
         }
@@ -31,5 +36,7 @@ class ReconciliationService(
     }
 
     @Scheduled(fixedDelayString = "\${reckon.reconciliation.poll-ms:60000}")
-    fun scheduled() { if (enabled) run() }
+    fun scheduled() {
+        if (enabled) run()
+    }
 }

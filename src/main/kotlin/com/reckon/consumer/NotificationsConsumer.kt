@@ -7,8 +7,10 @@ import org.springframework.stereotype.Component
 @Component
 class NotificationsConsumer(private val notifications: NotificationsService, private val mapper: ObjectMapper) {
     @KafkaListener(
-        topics = ["\${reckon.outbox.topic}"], groupId = "notifications",
-        autoStartup = "\${reckon.consumers.enabled:true}")
+        topics = ["\${reckon.outbox.topic}"],
+        groupId = "notifications",
+        autoStartup = "\${reckon.consumers.enabled:true}",
+    )
     fun onMessage(payload: String) {
         notifications.notify(mapper.readValue(payload, PaymentEvent::class.java))
     }

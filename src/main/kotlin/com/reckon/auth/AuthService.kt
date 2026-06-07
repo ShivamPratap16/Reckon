@@ -8,27 +8,25 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class AuthService(
-    private val users: UserRepository,
-    private val accounts: AccountRepository,
-    private val jwt: JwtService,
-) {
+class AuthService(private val users: UserRepository, private val accounts: AccountRepository, private val jwt: JwtService) {
     private val encoder = BCryptPasswordEncoder()
 
     @Transactional
     fun signup(email: String, password: String): String {
-        if (users.findByEmail(email) != null)
+        if (users.findByEmail(email) != null) {
             throw ApiException(HttpStatus.CONFLICT, "EMAIL_TAKEN", "email already registered")
+        }
         val user = users.create(email, encoder.encode(password))
-        accounts.createWallet(user.id)       // every user gets a wallet
+        accounts.createWallet(user.id) // every user gets a wallet
         return jwt.issue(user.id)
     }
 
     fun login(email: String, password: String): String {
         val user = users.findByEmail(email)
             ?: throw ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", "invalid email or password")
-        if (!encoder.matches(password, user.passwordHash))
+        if (!encoder.matches(password, user.passwordHash)) {
             throw ApiException(HttpStatus.UNAUTHORIZED, "BAD_CREDENTIALS", "invalid email or password")
+        }
         return jwt.issue(user.id)
     }
 }

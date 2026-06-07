@@ -16,12 +16,16 @@ import kotlin.test.assertTrue
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class MetricsTest : PostgresTestBase() {
     @Autowired lateinit var ledger: LedgerService
+
     @Autowired lateinit var fixtures: Fixtures
+
     @Autowired lateinit var registry: MeterRegistry
+
     @Autowired lateinit var rest: TestRestTemplate
 
     @Test fun `transfer increments the transfers counter and records timing`() {
-        val a = fixtures.walletWith(50000); val b = fixtures.walletWith(0)
+        val a = fixtures.walletWith(50000)
+        val b = fixtures.walletWith(0)
         ledger.recordTransfer(TxnType.P2P, "m1", RequestHash.of("P2P", a, b, 10000), UUID.randomUUID(), a, b, 10000)
         val count = registry.find("reckon.transfers").tag("outcome", "COMPLETED").counter()?.count() ?: 0.0
         assertTrue(count >= 1.0, "transfers counter should have incremented")

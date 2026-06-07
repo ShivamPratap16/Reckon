@@ -11,14 +11,18 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
 import java.util.UUID
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ReconciliationServiceTest : PostgresTestBase() {
     @Autowired lateinit var recon: ReconciliationService
+
     @Autowired lateinit var saga: AddMoneyService
+
     @Autowired lateinit var fixtures: Fixtures
+
     @Autowired lateinit var ledger: LedgerRepository
+
     @Autowired lateinit var jdbc: JdbcTemplate
 
     @Test fun `a fully ledgered system passes all audits`() {
@@ -30,8 +34,10 @@ class ReconciliationServiceTest : PostgresTestBase() {
         // that have no matching ledger entries — those are intentionally scoped to other test flows.
         // We verify that OUR ledger-funded wallet is NOT in the drift or unbalanced lists.
         assertTrue(report.unbalancedTransactions.isEmpty(), "unbalanced: ${report.unbalancedTransactions}")
-        assertTrue(report.balanceDrifts.none { it.accountId == wallet },
-            "expected no drift for the saga-funded wallet $wallet, but found drift: ${report.balanceDrifts.find { it.accountId == wallet }}")
+        assertTrue(
+            report.balanceDrifts.none { it.accountId == wallet },
+            "expected no drift for the saga-funded wallet $wallet, but found drift: ${report.balanceDrifts.find { it.accountId == wallet }}",
+        )
     }
 
     @Test fun `a corrupted balance is detected as drift`() {
@@ -54,14 +60,28 @@ class ReconciliationServiceTest : PostgresTestBase() {
     @Test fun `an unbalanced transaction is detected`() {
         // craft a transaction with a single DEBIT entry (does not net to zero)
         val wallet = fixtures.walletWith(0)
-        val txnId = ledger.insertPending(TxnType.P2P, "recon-unbal-${UUID.randomUUID()}", "-", 100,
-            UUID.randomUUID(), wallet, SystemAccounts.REWARDS_POOL)
-        jdbc.update("INSERT INTO ledger_entries(transaction_id, account_id, direction, amount) VALUES (?,?,?,?)",
-            txnId, wallet, "DEBIT", 100)   // lone debit, no matching credit
+        val txnId = ledger.insertPending(
+            TxnType.P2P,
+            "recon-unbal-${UUID.randomUUID()}",
+            "-",
+            100,
+            UUID.randomUUID(),
+            wallet,
+            SystemAccounts.REWARDS_POOL,
+        )
+        jdbc.update(
+            "INSERT INTO ledger_entries(transaction_id, account_id, direction, amount) VALUES (?,?,?,?)",
+            txnId,
+            wallet,
+            "DEBIT",
+            100,
+        ) // lone debit, no matching credit
         try {
             val report = recon.run()
-            assertTrue(report.unbalancedTransactions.any { it.transactionId == txnId },
-                "expected unbalanced txn $txnId, got ${report.unbalancedTransactions}")
+            assertTrue(
+                report.unbalancedTransactions.any { it.transactionId == txnId },
+                "expected unbalanced txn $txnId, got ${report.unbalancedTransactions}",
+            )
         } finally {
             // Clean up: remove the crafted entry and transaction so the DB stays globally clean
             jdbc.update("DELETE FROM ledger_entries WHERE transaction_id = ?", txnId)
@@ -71,8 +91,15 @@ class ReconciliationServiceTest : PostgresTestBase() {
 
     @Test fun `a stuck pending transaction is detected`() {
         val wallet = fixtures.walletWith(0)
-        val txnId = ledger.insertPending(TxnType.P2P, "recon-stuck-${UUID.randomUUID()}", "-", 100,
-            UUID.randomUUID(), wallet, SystemAccounts.REWARDS_POOL)
+        val txnId = ledger.insertPending(
+            TxnType.P2P,
+            "recon-stuck-${UUID.randomUUID()}",
+            "-",
+            100,
+            UUID.randomUUID(),
+            wallet,
+            SystemAccounts.REWARDS_POOL,
+        )
         // make it old so it crosses the stale threshold regardless of config
         jdbc.update("UPDATE transactions SET created_at = now() - interval '2 days' WHERE id = ?", txnId)
         try {
