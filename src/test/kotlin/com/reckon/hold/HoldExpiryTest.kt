@@ -11,12 +11,16 @@ import kotlin.test.assertEquals
 
 class HoldExpiryTest : PostgresTestBase() {
     @Autowired lateinit var auth: AuthorizationService
+
     @Autowired lateinit var expiry: HoldExpiryService
+
     @Autowired lateinit var fixtures: Fixtures
+
     @Autowired lateinit var jdbc: JdbcTemplate
 
     @Test fun `expired hold is released`() {
-        val payer = fixtures.walletWith(50000); val payee = fixtures.walletWith(0)
+        val payer = fixtures.walletWith(50000)
+        val payee = fixtures.walletWith(0)
         val hold = auth.authorize("e1", UUID.randomUUID(), payer, payee, 20000, 600)
         jdbc.update("UPDATE holds SET expires_at = now() - interval '1 hour' WHERE id = ?", hold)
         val released = expiry.expireDue(Instant.now())

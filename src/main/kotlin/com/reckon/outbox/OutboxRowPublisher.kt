@@ -27,7 +27,7 @@ class OutboxRowPublisher(
     fun publish(row: OutboxRow) {
         try {
             kafka.send(topic, row.aggregateId.toString(), envelope(row))
-                .get(sendTimeoutMs, TimeUnit.MILLISECONDS)       // bounded — no indefinite stall
+                .get(sendTimeoutMs, TimeUnit.MILLISECONDS) // bounded — no indefinite stall
             outbox.markPublished(row.id)
         } catch (e: Exception) {
             outbox.recordFailure(row.id, e.message ?: e.javaClass.simpleName)

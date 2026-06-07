@@ -11,15 +11,17 @@ class RewardsService(
     private val ledger: LedgerService,
     @Value("\${reckon.rewards.cashback-bps}") private val cashbackBps: Long,
 ) {
-    companion object { const val CONSUMER = "rewards" }
+    companion object {
+        const val CONSUMER = "rewards"
+    }
 
     /** Idempotent: dedup mark + cashback in ONE transaction. Redelivery is a no-op. */
     @Transactional
     fun award(event: PaymentEvent) {
-        if (event.type !in setOf("P2P", "PAY_MERCHANT")) return   // cashback only on spends (not ADD_MONEY/CASHBACK)
-        if (!processed.markProcessed(CONSUMER, event.eventId)) return  // already handled -> skip
+        if (event.type !in setOf("P2P", "PAY_MERCHANT")) return // cashback only on spends (not ADD_MONEY/CASHBACK)
+        if (!processed.markProcessed(CONSUMER, event.eventId)) return // already handled -> skip
         val payer = event.fromAccountId ?: return
-        val cashback = event.amount * cashbackBps / 10_000          // bps of amount, integer paisa
+        val cashback = event.amount * cashbackBps / 10_000 // bps of amount, integer paisa
         if (cashback <= 0) return
         ledger.recordCashback(event.eventId, payer, cashback)
     }

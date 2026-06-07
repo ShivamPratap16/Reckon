@@ -1,0 +1,11 @@
+build/
+.git/
+.gradle/
+docs/
+loadtest/
+observability/
+*.md
+.idea/
+*.iml
+.DS_Store
+out/

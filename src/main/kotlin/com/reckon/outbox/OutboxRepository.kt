@@ -11,7 +11,9 @@ class OutboxRepository(private val jdbc: JdbcTemplate) {
     fun append(aggregateId: UUID, eventType: String, payloadJson: String) {
         jdbc.update(
             "INSERT INTO outbox(aggregate_id, event_type, payload) VALUES (?, ?, ?::jsonb)",
-            aggregateId, eventType, payloadJson,
+            aggregateId,
+            eventType,
+            payloadJson,
         )
     }
 
@@ -20,21 +22,26 @@ class OutboxRepository(private val jdbc: JdbcTemplate) {
         """SELECT id, event_id, aggregate_id, event_type, payload
            FROM outbox WHERE published = false
            ORDER BY id LIMIT ? FOR UPDATE SKIP LOCKED""",
-        { rs, _ -> OutboxRow(
-            rs.getLong("id"),
-            rs.getObject("event_id", UUID::class.java),
-            rs.getObject("aggregate_id", UUID::class.java),
-            rs.getString("event_type"),
-            rs.getString("payload"),
-        ) },
+        { rs, _ ->
+            OutboxRow(
+                rs.getLong("id"),
+                rs.getObject("event_id", UUID::class.java),
+                rs.getObject("aggregate_id", UUID::class.java),
+                rs.getString("event_type"),
+                rs.getString("payload"),
+            )
+        },
         limit,
     )
 
     fun markPublished(id: Long) = jdbc.update(
-        "UPDATE outbox SET published = true, published_at = now() WHERE id = ?", id,
+        "UPDATE outbox SET published = true, published_at = now() WHERE id = ?",
+        id,
     )
 
     fun recordFailure(id: Long, error: String) = jdbc.update(
-        "UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?", error.take(500), id,
+        "UPDATE outbox SET attempts = attempts + 1, last_error = ? WHERE id = ?",
+        error.take(500),
+        id,
     )
 }

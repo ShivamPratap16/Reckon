@@ -21,14 +21,18 @@ class PaymentsController(private val auth: AuthorizationService, private val acc
         val payee = accounts.findByOwner(req.toUserId) ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_PAYEE", "no payee")
         return HoldResponse(auth.authorize(req.idempotencyKey, caller, payer.id, payee.id, req.amountPaisa, req.ttlSeconds), "HELD")
     }
+
     @PostMapping("/{holdId}/capture")
     fun capture(@CurrentUser caller: UUID, @PathVariable holdId: UUID, @RequestBody req: CaptureRequest): HoldResponse {
         val wallet = accounts.findByOwner(caller) ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_WALLET", "no wallet")
-        auth.capture(holdId, wallet.id, req.amountPaisa); return HoldResponse(holdId, "CAPTURED")
+        auth.capture(holdId, wallet.id, req.amountPaisa)
+        return HoldResponse(holdId, "CAPTURED")
     }
+
     @PostMapping("/{holdId}/void")
     fun void(@CurrentUser caller: UUID, @PathVariable holdId: UUID): HoldResponse {
         val wallet = accounts.findByOwner(caller) ?: throw ApiException(HttpStatus.NOT_FOUND, "NO_WALLET", "no wallet")
-        auth.void(holdId, wallet.id); return HoldResponse(holdId, "VOIDED")
+        auth.void(holdId, wallet.id)
+        return HoldResponse(holdId, "VOIDED")
     }
 }

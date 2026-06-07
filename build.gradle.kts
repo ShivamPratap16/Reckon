@@ -3,6 +3,9 @@ plugins {
     kotlin("plugin.spring") version "2.0.21"
     id("org.springframework.boot") version "3.3.5"
     id("io.spring.dependency-management") version "1.1.6"
+    jacoco
+    id("com.diffplug.spotless") version "6.25.0"
+    id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
 group = "com.reckon"
@@ -56,3 +59,50 @@ tasks.withType<Test> {
     systemProperty("api.version", "1.44")
 }
 kotlin { compilerOptions { freeCompilerArgs.add("-Xjsr305=strict") } }
+
+jacoco { toolVersion = "0.8.12" }
+
+tasks.test { finalizedBy(tasks.jacocoTestReport) }
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
+}
+tasks.check { dependsOn(tasks.jacocoTestCoverageVerification) }
+
+detekt {
+    buildUponDefaultConfig = true
+    baseline = file("config/detekt/baseline.xml")
+    config.setFrom(files("config/detekt/detekt.yml"))
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint("1.3.1").editorConfigOverride(
+            mapOf(
+                "ktlint_standard_no-wildcard-imports" to "disabled",
+                "ktlint_standard_filename" to "disabled",
+                "ktlint_standard_property-naming" to "disabled",
+                "max_line_length" to "160",
+            ),
+        )
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint("1.3.1")
+    }
+}

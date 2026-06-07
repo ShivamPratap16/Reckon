@@ -40,12 +40,15 @@ class JwtAuthFilter(private val jwt: JwtService) : OncePerRequestFilter() {
 }
 
 @Component
-class CurrentUserResolver : HandlerMethodArgumentResolver, WebMvcConfigurer {
-    override fun supportsParameter(p: MethodParameter) =
-        p.hasParameterAnnotation(CurrentUser::class.java) && p.parameterType == UUID::class.java
+class CurrentUserResolver :
+    HandlerMethodArgumentResolver,
+    WebMvcConfigurer {
+    override fun supportsParameter(p: MethodParameter) = p.hasParameterAnnotation(CurrentUser::class.java) && p.parameterType == UUID::class.java
     override fun resolveArgument(p: MethodParameter, c: ModelAndViewContainer?, w: NativeWebRequest, b: WebDataBinderFactory?): Any? =
         SecurityContextHolder.getContext().authentication?.principal as? UUID
-    override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) { resolvers.add(this) }
+    override fun addArgumentResolvers(resolvers: MutableList<HandlerMethodArgumentResolver>) {
+        resolvers.add(this)
+    }
 }
 
 @Configuration

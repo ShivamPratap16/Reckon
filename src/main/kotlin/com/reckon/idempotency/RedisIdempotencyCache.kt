@@ -25,7 +25,7 @@ class RedisIdempotencyCache(
                 ?.let { mapper.readValue(it, CachedResult::class.java) }
         } catch (e: Exception) {
             log.warn("idempotency cache GET degraded: {}", e.message)
-            null  // DB remains source of truth
+            null // DB remains source of truth
         }
     }
 
@@ -35,10 +35,10 @@ class RedisIdempotencyCache(
             redis.opsForValue().set(
                 key(initiatorId, idempotencyKey),
                 mapper.writeValueAsString(result),
-                Duration.ofHours(ttlHours)
+                Duration.ofHours(ttlHours),
             )
         } catch (e: Exception) {
-            log.warn("idempotency cache PUT degraded: {}", e.message)  // best-effort
+            log.warn("idempotency cache PUT degraded: {}", e.message) // best-effort
         }
     }
 }

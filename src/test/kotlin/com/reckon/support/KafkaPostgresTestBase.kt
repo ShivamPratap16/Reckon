@@ -13,8 +13,12 @@ import org.testcontainers.utility.DockerImageName
 abstract class KafkaPostgresTestBase {
     companion object {
         @JvmStatic val pg = PostgreSQLContainer("postgres:16").apply {
-            withDatabaseName("reckon"); withUsername("reckon"); withPassword("reckon"); start()
+            withDatabaseName("reckon")
+            withUsername("reckon")
+            withPassword("reckon")
+            start()
         }
+
         @JvmStatic val kafka = KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.6.1")).apply { start() }
 
         @JvmStatic @DynamicPropertySource

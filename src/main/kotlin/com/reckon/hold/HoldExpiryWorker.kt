@@ -10,14 +10,11 @@ import org.springframework.transaction.annotation.Transactional
  * on the same bean instance. Mirror of the Plan 3/Plan 5 pattern.
  */
 @Service
-class HoldExpiryWorker(
-    private val holds: HoldRepository,
-    private val accounts: AccountRepository,
-) {
+class HoldExpiryWorker(private val holds: HoldRepository, private val accounts: AccountRepository) {
     @Transactional
     fun expireOne(hold: Hold): Boolean {
         accounts.lockByIdsInOrder(listOf(hold.payerAccountId))
-        if (holds.markClosed(hold.id, HoldStatus.EXPIRED) == 0) return false   // already closed by a racing capture/void
+        if (holds.markClosed(hold.id, HoldStatus.EXPIRED) == 0) return false // already closed by a racing capture/void
         accounts.releaseReserve(hold.payerAccountId, hold.amount)
         return true
     }

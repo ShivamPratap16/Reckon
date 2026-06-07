@@ -15,6 +15,7 @@ import kotlin.test.assertEquals
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class TransferControllerTest : PostgresTestBase() {
     @Autowired lateinit var rest: TestRestTemplate
+
     @Autowired lateinit var jdbc: JdbcTemplate
 
     private fun signup(email: String): Pair<String, UUID> {
@@ -28,15 +29,25 @@ class TransferControllerTest : PostgresTestBase() {
     private fun auth(token: String) = HttpHeaders().apply { setBearerAuth(token) }
 
     @Test fun `authenticated p2p transfer succeeds`() {
-        val (tokenA, _) = signup("p2pa@x.com"); val (_, idB) = signup("p2pb@x.com")
+        val (tokenA, _) = signup("p2pa@x.com")
+        val (_, idB) = signup("p2pb@x.com")
         fund("p2pa@x.com", 50000)
         val body = P2pRequest("idem-1", idB, 20000)
-        val resp = rest.exchange("/transfers/p2p", HttpMethod.POST,
-            HttpEntity(body, auth(tokenA)), TransferResult::class.java)
+        val resp = rest.exchange(
+            "/transfers/p2p",
+            HttpMethod.POST,
+            HttpEntity(body, auth(tokenA)),
+            TransferResult::class.java,
+        )
         assertEquals(HttpStatus.OK, resp.statusCode)
         assertEquals("COMPLETED", resp.body?.status)
-        assertEquals(30000, jdbc.queryForObject(
-            "SELECT balance FROM accounts WHERE owner_id=(SELECT id FROM users WHERE email='p2pa@x.com')", Long::class.java))
+        assertEquals(
+            30000,
+            jdbc.queryForObject(
+                "SELECT balance FROM accounts WHERE owner_id=(SELECT id FROM users WHERE email='p2pa@x.com')",
+                Long::class.java,
+            ),
+        )
     }
 
     @Test fun `unauthenticated transfer is rejected`() {
@@ -46,10 +57,15 @@ class TransferControllerTest : PostgresTestBase() {
     }
 
     @Test fun `insufficient funds returns 422`() {
-        val (tokenA, _) = signup("p2pd@x.com"); val (_, idB) = signup("p2pe@x.com")
+        val (tokenA, _) = signup("p2pd@x.com")
+        val (_, idB) = signup("p2pe@x.com")
         fund("p2pd@x.com", 100)
-        val resp = rest.exchange("/transfers/p2p", HttpMethod.POST,
-            HttpEntity(P2pRequest("idem-2", idB, 99999), auth(tokenA)), String::class.java)
+        val resp = rest.exchange(
+            "/transfers/p2p",
+            HttpMethod.POST,
+            HttpEntity(P2pRequest("idem-2", idB, 99999), auth(tokenA)),
+            String::class.java,
+        )
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, resp.statusCode)
     }
 }

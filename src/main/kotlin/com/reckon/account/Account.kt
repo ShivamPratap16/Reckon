@@ -30,18 +30,22 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
     fun createWallet(ownerId: UUID): Account {
         val id = jdbc.queryForObject(
             "INSERT INTO accounts(owner_id, type) VALUES (?, 'USER_WALLET') RETURNING id",
-            UUID::class.java, ownerId,
+            UUID::class.java,
+            ownerId,
         )!!
         return Account(id, ownerId, AccountType.USER_WALLET, 0, 0, 0)
     }
 
     fun findByOwner(ownerId: UUID): Account? = jdbc.query(
         "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE owner_id = ? AND type='USER_WALLET'",
-        mapper, ownerId,
+        mapper,
+        ownerId,
     ).firstOrNull()
 
     fun findById(id: UUID): Account? = jdbc.query(
-        "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE id = ?", mapper, id,
+        "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE id = ?",
+        mapper,
+        id,
     ).firstOrNull()
 
     /**
@@ -56,7 +60,8 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
                 // KEY SHARE locks taken by FK reference checks (e.g. ledger_entries.account_id → accounts).
                 // This avoids deadlocks between our writer lock and FK-share locks from concurrent inserts.
                 "SELECT id, owner_id, type, balance, version, reserved_balance FROM accounts WHERE id = ? FOR NO KEY UPDATE",
-                mapper, id,
+                mapper,
+                id,
             ).firstOrNull() ?: throw IllegalStateException("account not found: $id")
         }
     }
@@ -64,21 +69,32 @@ class AccountRepository(private val jdbc: JdbcTemplate) {
     /** Reserve funds if available (balance - reserved >= amount). Returns rows updated (0 = insufficient available). */
     fun reserveIfAvailable(id: UUID, amount: Long): Int = jdbc.update(
         """UPDATE accounts SET reserved_balance = reserved_balance + ?, updated_at = now()
-           WHERE id = ? AND (balance - reserved_balance) >= ?""", amount, id, amount)
+           WHERE id = ? AND (balance - reserved_balance) >= ?""",
+        amount,
+        id,
+        amount,
+    )
 
     /** Release a reservation. Returns rows updated. */
     fun releaseReserve(id: UUID, amount: Long): Int = jdbc.update(
         "UPDATE accounts SET reserved_balance = reserved_balance - ?, updated_at = now() WHERE id = ? AND reserved_balance >= ?",
-        amount, id, amount)
+        amount,
+        id,
+        amount,
+    )
 
     /** Apply a signed delta to balance and bump version. Returns rows updated. */
     fun applyDelta(id: UUID, delta: Long): Int = jdbc.update(
         "UPDATE accounts SET balance = balance + ?, version = version + 1, updated_at = now() WHERE id = ?",
-        delta, id,
+        delta,
+        id,
     )
 
     /** Optimistic update: apply delta only if version is unchanged. Returns rows updated (0 = conflict). */
     fun applyDeltaCas(id: UUID, delta: Long, expectedVersion: Long): Int = jdbc.update(
         "UPDATE accounts SET balance = balance + ?, version = version + 1, updated_at = now() WHERE id = ? AND version = ?",
-        delta, id, expectedVersion)
+        delta,
+        id,
+        expectedVersion,
+    )
 }

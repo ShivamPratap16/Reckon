@@ -7,14 +7,26 @@ import org.springframework.test.context.TestPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
 
 @SpringBootTest
-@TestPropertySource(properties = ["reckon.outbox.scheduler.enabled=false", "reckon.consumers.enabled=false", "reckon.saga.recovery.enabled=false", "reckon.saga.recovery.stale-seconds=0", "reckon.reconciliation.enabled=false", "reckon.idempotency.cache.enabled=false", "reckon.holds.expiry.enabled=false"])
+@TestPropertySource(
+    properties = [
+        "reckon.outbox.scheduler.enabled=false",
+        "reckon.consumers.enabled=false",
+        "reckon.saga.recovery.enabled=false",
+        "reckon.saga.recovery.stale-seconds=0",
+        "reckon.reconciliation.enabled=false",
+        "reckon.idempotency.cache.enabled=false",
+        "reckon.holds.expiry.enabled=false",
+    ],
+)
 abstract class PostgresTestBase {
     companion object {
         // Singleton container shared across ALL test classes in the JVM.
         // Started once, stopped via JVM shutdown hook — avoids the "HikariPool connections
         // stale after container restart" problem when multiple Spring contexts are created.
         val pg: PostgreSQLContainer<*> = PostgreSQLContainer("postgres:16").apply {
-            withDatabaseName("reckon"); withUsername("reckon"); withPassword("reckon")
+            withDatabaseName("reckon")
+            withUsername("reckon")
+            withPassword("reckon")
             withReuse(false)
         }.also { it.start() }
 

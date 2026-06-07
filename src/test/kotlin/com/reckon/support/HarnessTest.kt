@@ -1,9 +1,9 @@
 package com.reckon.support
 
-import kotlin.test.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.JdbcTemplate
+import kotlin.test.assertEquals
 
 class HarnessTest : PostgresTestBase() {
     @Autowired

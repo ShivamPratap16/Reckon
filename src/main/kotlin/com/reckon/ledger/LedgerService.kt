@@ -26,10 +26,7 @@ class LedgerService(
      * which IS @Transactional via a cross-bean proxy call (no self-invocation trap here).
      * Any failure marks the transaction FAILED in its own REQUIRES_NEW transaction via statusWriter.
      */
-    fun recordTransfer(
-        type: TxnType, idempotencyKey: String, requestHash: String,
-        initiatorId: UUID, from: UUID, to: UUID, amount: Long,
-    ): TransferOutcome {
+    fun recordTransfer(type: TxnType, idempotencyKey: String, requestHash: String, initiatorId: UUID, from: UUID, to: UUID, amount: Long): TransferOutcome {
         val span = tracer.nextSpan().name("reckon.transfer").tag("type", type.name).start()
         return try {
             tracer.withSpan(span).use {
@@ -47,23 +44,29 @@ class LedgerService(
     }
 
     private fun recordTransferInternal(
-        type: TxnType, idempotencyKey: String, requestHash: String,
-        initiatorId: UUID, from: UUID, to: UUID, amount: Long,
+        type: TxnType,
+        idempotencyKey: String,
+        requestHash: String,
+        initiatorId: UUID,
+        from: UUID,
+        to: UUID,
+        amount: Long,
     ): TransferOutcome {
         if (amount <= 0) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_TRANSFER", "amount must be positive")
         if (from == to) throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INVALID_TRANSFER", "cannot transfer to self")
 
         // FAST PATH: terminal result already cached?
         cache.get(initiatorId, idempotencyKey)?.let { cached ->
-            if (cached.requestHash != requestHash)
+            if (cached.requestHash != requestHash) {
                 throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "IDEMPOTENCY_KEY_REUSE", "key reused with different request")
+            }
             return when (cached.status) {
                 "COMPLETED" -> {
                     metrics.transfer(type.name, "REPLAYED")
                     TransferOutcome(cached.transactionId, "COMPLETED", replayed = true)
                 }
-                "FAILED"    -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, cached.failureCode ?: "FAILED", "replayed prior failure")
-                else        -> {
+                "FAILED" -> throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, cached.failureCode ?: "FAILED", "replayed prior failure")
+                else -> {
                     metrics.transfer(type.name, "REPLAYED")
                     TransferOutcome(cached.transactionId, cached.status, replayed = true)
                 }
@@ -73,7 +76,7 @@ class LedgerService(
         val txnId = try {
             ledger.insertPending(type, idempotencyKey, requestHash, amount, initiatorId, from, to)
         } catch (e: DuplicateKeyException) {
-            val result = replay(initiatorId, idempotencyKey, requestHash)   // DB-authoritative; replay() also warms the cache
+            val result = replay(initiatorId, idempotencyKey, requestHash) // DB-authoritative; replay() also warms the cache
             metrics.transfer(type.name, "REPLAYED")
             return result
         }
@@ -99,10 +102,17 @@ class LedgerService(
      *  Emits no outbox event (prevents a cashback feedback loop). */
     fun recordCashback(sourceEventId: UUID, toAccount: UUID, amount: Long) {
         val txnId = try {
-            ledger.insertPending(TxnType.CASHBACK, "cashback:$sourceEventId", "-", amount,
-                SystemAccounts.REWARDS_POOL, SystemAccounts.REWARDS_POOL, toAccount)
+            ledger.insertPending(
+                TxnType.CASHBACK,
+                "cashback:$sourceEventId",
+                "-",
+                amount,
+                SystemAccounts.REWARDS_POOL,
+                SystemAccounts.REWARDS_POOL,
+                toAccount,
+            )
         } catch (e: org.springframework.dao.DuplicateKeyException) {
-            return   // cashback for this source event already recorded (defense-in-depth no-op)
+            return // cashback for this source event already recorded (defense-in-depth no-op)
         }
         executor.execute(txnId, TxnType.CASHBACK, SystemAccounts.REWARDS_POOL, toAccount, amount, emitEvent = false)
     }
@@ -111,23 +121,31 @@ class LedgerService(
     private fun replay(initiatorId: UUID, idempotencyKey: String, requestHash: String): TransferOutcome {
         val existing = ledger.findByInitiatorAndKey(initiatorId, idempotencyKey)
             ?: throw ApiException(HttpStatus.CONFLICT, "IN_PROGRESS", "duplicate key, original not yet visible")
-        if (existing.requestHash != requestHash)
-            throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "IDEMPOTENCY_KEY_REUSE",
-                "idempotency key reused with different request")
+        if (existing.requestHash != requestHash) {
+            throw ApiException(
+                HttpStatus.UNPROCESSABLE_ENTITY,
+                "IDEMPOTENCY_KEY_REUSE",
+                "idempotency key reused with different request",
+            )
+        }
         return when (existing.status) {
             "COMPLETED" -> {
                 cache.put(initiatorId, idempotencyKey, CachedResult(existing.id, "COMPLETED", requestHash, null))
                 TransferOutcome(existing.id, "COMPLETED", replayed = true)
             }
-            "FAILED"    -> {
+            "FAILED" -> {
                 cache.put(initiatorId, idempotencyKey, CachedResult(existing.id, "FAILED", requestHash, existing.failureReason))
-                throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY,
+                throw ApiException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
                     existing.failureReason ?: "FAILED",
-                    "replayed prior failure")
+                    "replayed prior failure",
+                )
             }
-            else        -> throw ApiException(HttpStatus.CONFLICT, "IN_PROGRESS",
-                              "original request still in progress")   // PENDING: NOT cached
+            else -> throw ApiException(
+                HttpStatus.CONFLICT,
+                "IN_PROGRESS",
+                "original request still in progress",
+            ) // PENDING: NOT cached
         }
     }
-
 }

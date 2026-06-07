@@ -12,8 +12,7 @@ data class ApiErrorBody(val code: String, val message: String)
 @RestControllerAdvice
 class GlobalExceptionHandler {
     @ExceptionHandler(ApiException::class)
-    fun handle(e: ApiException): ResponseEntity<ApiErrorBody> =
-        ResponseEntity.status(e.status).body(ApiErrorBody(e.code, e.message ?: e.code))
+    fun handle(e: ApiException): ResponseEntity<ApiErrorBody> = ResponseEntity.status(e.status).body(ApiErrorBody(e.code, e.message ?: e.code))
 
     @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException::class)
     fun handleValidation(e: org.springframework.web.bind.MethodArgumentNotValidException): ResponseEntity<ApiErrorBody> {

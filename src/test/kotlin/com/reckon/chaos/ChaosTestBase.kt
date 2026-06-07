@@ -37,7 +37,7 @@ import org.testcontainers.containers.ToxiproxyContainer
         "spring.datasource.hikari.connection-timeout=3000",
         "spring.datasource.hikari.validation-timeout=2000",
         "spring.datasource.hikari.maximum-pool-size=8",
-    ]
+    ],
 )
 abstract class ChaosTestBase {
     companion object {

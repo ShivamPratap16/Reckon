@@ -1,0 +1,47 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>EmptyCatchBlock:HoldConcurrencyTest.kt$HoldConcurrencyTest${}</ID>
+    <ID>MatchingDeclarationName:Money.kt$Paisa</ID>
+    <ID>NestedBlockDepth:SagaRecoveryService.kt$SagaRecoveryService$fun recover(): Int</ID>
+    <ID>SpreadOperator:ReckonApplication.kt$(*args)</ID>
+    <ID>SwallowedException:AddMoneyService.kt$AddMoneyService$e: BankTimeoutException</ID>
+    <ID>SwallowedException:AddMoneyService.kt$AddMoneyService$e: DuplicateKeyException</ID>
+    <ID>SwallowedException:HoldConcurrencyTest.kt$HoldConcurrencyTest$e: Exception</ID>
+    <ID>SwallowedException:JwtService.kt$JwtService$e: Exception</ID>
+    <ID>SwallowedException:LedgerInvariantPropertyTest.kt$LedgerInvariantPropertyTest$e: Exception</ID>
+    <ID>SwallowedException:LedgerService.kt$LedgerService$e: DuplicateKeyException</ID>
+    <ID>SwallowedException:LedgerService.kt$LedgerService$e: org.springframework.dao.DuplicateKeyException</ID>
+    <ID>SwallowedException:LockingBenchmarkTest.kt$LockingBenchmarkTest$e: Exception</ID>
+    <ID>SwallowedException:OptimisticTransferExecutor.kt$OptimisticTransferExecutor$e: RetryConflict</ID>
+    <ID>SwallowedException:SagaChaosTest.kt$SagaChaosTest$e: Exception</ID>
+    <ID>SwallowedException:SagaRecoveryService.kt$SagaRecoveryService$e: Exception</ID>
+    <ID>SwallowedException:SagaRecoveryTest.kt$SagaRecoveryTest$e: Exception</ID>
+    <ID>SwallowedException:TransferChaosTest.kt$TransferChaosTest$e: Exception</ID>
+    <ID>ThrowsCount:AddMoneyService.kt$AddMoneyService$private fun replay(initiatorId: UUID, idempotencyKey: String, requestHash: String): TransferOutcome</ID>
+    <ID>ThrowsCount:AuthorizationService.kt$AuthorizationService$@Transactional fun capture(holdId: UUID, callerWalletId: UUID, captureAmount: Long?): UUID</ID>
+    <ID>ThrowsCount:AuthorizationService.kt$AuthorizationService$@Transactional fun void(holdId: UUID, callerWalletId: UUID)</ID>
+    <ID>ThrowsCount:LedgerService.kt$LedgerService$private fun recordTransferInternal( type: TxnType, idempotencyKey: String, requestHash: String, initiatorId: UUID, from: UUID, to: UUID, amount: Long, ): TransferOutcome</ID>
+    <ID>ThrowsCount:LedgerService.kt$LedgerService$private fun replay(initiatorId: UUID, idempotencyKey: String, requestHash: String): TransferOutcome</ID>
+    <ID>ThrowsCount:OptimisticTransferExecutor.kt$OptimisticTransferExecutor$fun execute(txnId: UUID, type: TxnType, from: UUID, to: UUID, amount: Long): Int</ID>
+    <ID>ThrowsCount:TransferController.kt$TransferController$@PostMapping("/p2p") fun p2p(@CurrentUser callerId: UUID?, @RequestBody req: P2pRequest): ResponseEntity&lt;TransferResult&gt;</ID>
+    <ID>TooManyFunctions:LedgerRepository.kt$LedgerRepository</ID>
+    <ID>UnusedParameter:SimulatedBank.kt$SimulatedBank$amountPaisa: Long</ID>
+    <ID>UnusedPrivateProperty:AddMoneyService.kt$AddMoneyService$private val accounts: AccountRepository</ID>
+    <ID>UseCheckOrError:Account.kt$AccountRepository$throw IllegalStateException("account not found: $id")</ID>
+    <ID>UseCheckOrError:AuthorizationService.kt$AuthorizationService$throw IllegalStateException("hold $holdId no longer HELD")</ID>
+    <ID>UseCheckOrError:AuthorizationService.kt$AuthorizationService$throw IllegalStateException("reservation missing for hold $holdId")</ID>
+    <ID>UseCheckOrError:OptimisticTransferExecutor.kt$OptimisticTransferExecutor$throw IllegalStateException("not PENDING")</ID>
+    <ID>UseCheckOrError:TransferExecutor.kt$TransferExecutor$throw IllegalStateException("transaction $txnId not in the expected state; aborting")</ID>
+    <ID>UtilityClassWithPublicConstructor:ChaosTestBase.kt$ChaosTestBase</ID>
+    <ID>UtilityClassWithPublicConstructor:KafkaPostgresTestBase.kt$KafkaPostgresTestBase</ID>
+    <ID>UtilityClassWithPublicConstructor:PostgresTestBase.kt$PostgresTestBase</ID>
+    <ID>UtilityClassWithPublicConstructor:RedisPostgresTestBase.kt$RedisPostgresTestBase</ID>
+    <ID>VariableNaming:LedgerInvariantPropertyTest.kt$LedgerInvariantPropertyTest$private val NUM_ACCOUNTS = 5</ID>
+    <ID>VariableNaming:LedgerInvariantPropertyTest.kt$LedgerInvariantPropertyTest$private val NUM_OPS = 120</ID>
+    <ID>VariableNaming:LockingBenchmarkTest.kt$LockingBenchmarkTest$private val HOT_ACCOUNTS = 8 // more accounts = less per-account contention for optimistic</ID>
+    <ID>VariableNaming:LockingBenchmarkTest.kt$LockingBenchmarkTest$private val THREADS = 8</ID>
+    <ID>VariableNaming:LockingBenchmarkTest.kt$LockingBenchmarkTest$private val TRANSFERS = 200</ID>
+  </CurrentIssues>
+</SmellBaseline>

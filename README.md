@@ -1,5 +1,7 @@
 # Reckon
 
+![CI](https://github.com/ShivamPratap16/Reckon/actions/workflows/ci.yml/badge.svg)
+
 > A double-entry ledger that reckons every paisa.
 
 Reckon is a wallet/payments backend (think the core inside PhonePe / Paytm Wallet) built to be **provably correct under concurrency and failure** — money is never lost or created. It's a study in the hard parts of fintech backends: double-entry ledgers, idempotency, distributed-transaction failure handling, and reconciliation.

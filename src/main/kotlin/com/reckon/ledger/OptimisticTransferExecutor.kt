@@ -36,8 +36,9 @@ class OptimisticTransferExecutor(
                 tx.executeWithoutResult {
                     val src = accounts.findById(from) ?: error("no account $from")
                     val dst = accounts.findById(to) ?: error("no account $to")
-                    if (src.type in setOf(AccountType.USER_WALLET, AccountType.MERCHANT) && src.balance < amount)
+                    if (src.type in setOf(AccountType.USER_WALLET, AccountType.MERCHANT) && src.balance < amount) {
                         throw ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "INSUFFICIENT_FUNDS", "insufficient balance")
+                    }
                     ledger.insertEntry(LedgerEntry(txnId, from, Direction.DEBIT, amount))
                     ledger.insertEntry(LedgerEntry(txnId, to, Direction.CREDIT, amount))
                     if (accounts.applyDeltaCas(from, -amount, src.version) == 0) throw RetryConflict()
@@ -46,8 +47,13 @@ class OptimisticTransferExecutor(
                 }
                 return attempts
             } catch (e: RetryConflict) {
-                if (attempts >= maxRetries) throw ApiException(HttpStatus.CONFLICT, "TOO_MUCH_CONTENTION",
-                    "optimistic retries exhausted after $attempts attempts")
+                if (attempts >= maxRetries) {
+                    throw ApiException(
+                        HttpStatus.CONFLICT,
+                        "TOO_MUCH_CONTENTION",
+                        "optimistic retries exhausted after $attempts attempts",
+                    )
+                }
                 // loop: re-read fresh versions and try again
             }
         }
