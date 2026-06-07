@@ -1,7 +1,5 @@
 package com.reckon.bank
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
-import io.github.resilience4j.retry.annotation.Retry
 import org.springframework.stereotype.Component
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -20,8 +18,6 @@ class SimulatedBank {
     private enum class State { CHARGED, DECLINED }
     private val ledger = ConcurrentHashMap<UUID, State>()
 
-    @CircuitBreaker(name = "bank")
-    @Retry(name = "bank")
     fun debit(transactionId: UUID, bankRef: String, amountPaisa: Long): BankResult {
         ledger[transactionId]?.let {
             // idempotent: already seen this txn
