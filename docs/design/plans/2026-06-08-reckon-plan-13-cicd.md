@@ -1,6 +1,6 @@
 # Reckon Plan 13 — Tier 0: CI/CD, Quality Gates, Containerization Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Turn Reckon from "code on GitHub" into "a system that builds, tests, and runs" with enforced quality: a GitHub Actions CI pipeline (build + 81 tests + lint + coverage) on every push/PR, code-format + static-analysis gates, a coverage gate, a production multi-stage Docker image, a full-stack production compose for VM deployment, and fail-fast secret handling.
 

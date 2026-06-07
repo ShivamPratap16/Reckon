@@ -1,6 +1,6 @@
 # Reckon Plan 9 — Hold → Capture (Two-Phase Payments) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Add card/UPI-style two-phase payments: an **authorization** reserves funds (without moving money), a **capture** settles (moves money, full or partial), and a **void/expiry** releases the reservation. Available balance = `balance − reserved`; the double-entry invariant `balance == SUM(entries)` is preserved because holds write NO ledger entries — only captures do.
 

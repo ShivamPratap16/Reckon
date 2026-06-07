@@ -1,6 +1,6 @@
 # Reckon Plan 11 — Chaos Testing (Toxiproxy) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Prove Reckon's correctness survives a hostile network. Put **Toxiproxy** between the app and **PostgreSQL**, inject latency and connection failures, and assert the money invariants still hold: transfers are atomic (no half-applied money even when the connection dies mid-transaction), and the ADD_MONEY saga + recovery lose zero money under chaos.
 

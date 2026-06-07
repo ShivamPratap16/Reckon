@@ -1,6 +1,6 @@
 # Reckon Plan 4 — Idempotent Consumers (Exactly-Once Effect) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Consume `payment.completed` events and award cashback exactly once, even though Kafka delivers at-least-once. Achieve exactly-once *effect* by making consumers idempotent via a `processed_events(consumer_name, event_id)` dedup table, with the dedup insert and the side-effect committed in one transaction. Demonstrate two independent consumers (rewards + notifications) on the same event.
 

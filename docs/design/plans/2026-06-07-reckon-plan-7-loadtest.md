@@ -1,6 +1,6 @@
 # Reckon Plan 7 — Load Test + Locking Benchmark Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Prove correctness under load and quantify the concurrency design. Two deliverables: (A) a JVM benchmark comparing **pessimistic vs optimistic** locking on the same schema (real throughput numbers + correctness for both), and (B) a **k6** HTTP load test driving concurrent transfers with duplicate idempotency-key retries against the running app, then asserting zero balance inconsistencies / zero double-debits via reconciliation.
 

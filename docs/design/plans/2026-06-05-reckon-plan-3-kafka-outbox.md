@@ -1,6 +1,6 @@
 # Reckon Plan 3 — Kafka Transactional Outbox Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Reliably publish a `payment.completed` event for every committed transfer, with no lost events even if Kafka is down — by writing the event to an `outbox` table inside the same DB transaction as the ledger write, then publishing it to Kafka with a polling publisher.
 

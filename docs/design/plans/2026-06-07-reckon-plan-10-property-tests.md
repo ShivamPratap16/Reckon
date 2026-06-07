@@ -1,6 +1,6 @@
 # Reckon Plan 10 — Property-Based Ledger Invariant Tests Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Prove the ledger's core invariants hold under *arbitrary* operation sequences, not just hand-picked examples. Generate long randomized sequences of mixed operations (add-money, P2P transfer, authorize, capture, void) against a fresh set of accounts, then assert the invariants that must ALWAYS hold:
 1. **Per account:** `balance == SUM(signed ledger entries)` (double-entry consistency).

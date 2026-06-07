@@ -1,6 +1,6 @@
 # Reckon Plan 6 — Reconciliation Jobs Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Continuously verify the ledger's integrity with scheduled audits that DETECT (not hide) bugs: every transaction's entries sum to zero, every account's `balance` equals the sum of its ledger entries, and no transaction is stuck PENDING. Findings are reported as a structured report + metrics; reconciliation never silently "fixes" a balance (that would mask a bug).
 

@@ -1,6 +1,6 @@
 # WalletX Plan 1 — Foundation + Ledger/P2P Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Stand up the WalletX Spring Boot skeleton with Postgres + JWT auth, then build the double-entry ledger core and a fully correct, concurrency-safe P2P transfer endpoint end-to-end.
 

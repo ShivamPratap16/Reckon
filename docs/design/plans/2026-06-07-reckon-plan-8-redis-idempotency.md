@@ -1,6 +1,6 @@
 # Reckon Plan 8 — Redis Idempotency Fast-Path Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Add Redis as a **fast-path cache** in front of idempotency replay: a repeated request whose result is already known is served from Redis without touching Postgres. Postgres' `unique(initiator_id, idempotency_key)` constraint REMAINS the authoritative race guard — Redis is a best-effort accelerator that the system degrades gracefully without (if Redis is down, everything still works via the DB).
 

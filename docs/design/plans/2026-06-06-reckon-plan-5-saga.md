@@ -1,6 +1,6 @@
 # Reckon Plan 5 — ADD_MONEY Saga + Simulated Bank + Recovery Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Let a user add money to their wallet from an external bank via a **saga**: a local PENDING transaction → a remote (idempotent) bank debit → a local ledger credit, each step independently committed and recoverable. A scheduled recovery job resolves sagas left mid-flight by crashes/timeouts, with bank-status checks and (where needed) compensating refunds.
 

@@ -1,6 +1,6 @@
 # Reckon Plan 2 — Idempotency Replay Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Make money-moving endpoints safe to retry: a repeated request with the same idempotency key never double-charges — it replays the first attempt's outcome. Implements the spec's 4-way replay (COMPLETED / FAILED / in-flight PENDING / different request → 422).
 

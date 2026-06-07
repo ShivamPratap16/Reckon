@@ -1,6 +1,6 @@
 # Reckon Plan 12 — Observability (Metrics, Tracing, Correlation IDs) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development. Steps use checkbox (`- [ ]`) syntax.
+> Implementation plan — each task is a small, independently-verifiable checklist of steps (`- [ ]`), built and tested incrementally.
 
 **Goal:** Make Reckon observable like a production service: custom business **metrics** (Prometheus), **distributed tracing** (OpenTelemetry via Micrometer Tracing) with a span around money operations, and a **correlation/request ID** threaded through logs. Ship a runnable Prometheus + Grafana stack with a pre-built dashboard.
 
