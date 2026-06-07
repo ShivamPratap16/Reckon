@@ -6,6 +6,10 @@
 
 Reckon is a wallet/payments backend (think the core inside PhonePe / Paytm Wallet) built to be **provably correct under concurrency and failure** — money is never lost or created. It's a study in the hard parts of fintech backends: double-entry ledgers, idempotency, distributed-transaction failure handling, and reconciliation.
 
+![200 concurrent transfers on one account, against a real Postgres, conserving every paisa](docs/assets/test-run.gif)
+
+<sub>↑ the signature correctness proof: 200 concurrent transfers race a single account against a real (Testcontainers) Postgres — exactly the funded number succeed, never an overdraft, money conserved, no orphaned ledger entries.</sub>
+
 ## Status — complete
 
 All seven phases of the design are implemented and tested (**63 tests**, Testcontainers with real Postgres / Kafka / Redis):
