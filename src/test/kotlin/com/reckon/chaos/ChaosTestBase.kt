@@ -7,9 +7,6 @@ import org.springframework.test.context.TestPropertySource
 import org.testcontainers.containers.Network
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.containers.ToxiproxyContainer
-import org.testcontainers.images.AbstractImagePullPolicy
-import org.testcontainers.images.ImageData
-import org.testcontainers.utility.DockerImageName
 
 /**
  * Chaos test base: routes the app's Postgres connection through Toxiproxy.
@@ -57,15 +54,9 @@ abstract class ChaosTestBase {
                 start()
             }
 
-        // Always use the locally cached image — avoids ghcr.io TLS timeouts in restricted networks.
-        private val localOnly = object : AbstractImagePullPolicy() {
-            override fun shouldPullCached(name: DockerImageName, data: ImageData) = false
-        }
-
         @JvmStatic
         val toxi: ToxiproxyContainer = ToxiproxyContainer("ghcr.io/shopify/toxiproxy:2.9.0")
             .withNetwork(network)
-            .withImagePullPolicy(localOnly)
             .apply { start() }
 
         /**

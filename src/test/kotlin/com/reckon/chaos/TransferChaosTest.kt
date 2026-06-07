@@ -88,7 +88,5 @@ class TransferChaosTest : ChaosTestBase() {
             1000L * ok, fixtures.balanceOf(b),
             "b should hold exactly the successful transfers (all-or-nothing atomicity)"
         )
-        // Some failures are expected but not required; the invariant is what matters.
-        assertTrue(failed >= 0)
     }
 }
