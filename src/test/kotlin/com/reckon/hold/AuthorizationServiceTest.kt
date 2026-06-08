@@ -1,6 +1,6 @@
 package com.reckon.hold
-
-import com.reckon.platform.ApiException
+import com.reckon.hold.service.AuthorizationService
+import com.reckon.platform.exception.ApiException
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test

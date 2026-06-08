@@ -1,6 +1,6 @@
 package com.reckon.saga
-
-import com.reckon.account.SystemAccounts
+import com.reckon.account.constant.SystemAccounts
+import com.reckon.saga.service.AddMoneyService
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test

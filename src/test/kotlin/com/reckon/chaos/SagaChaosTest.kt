@@ -1,9 +1,9 @@
 package com.reckon.chaos
 
-import com.reckon.ledger.LedgerRepository
-import com.reckon.recon.ReconciliationService
-import com.reckon.saga.AddMoneyService
-import com.reckon.saga.SagaRecoveryService
+import com.reckon.ledger.repository.LedgerRepository
+import com.reckon.recon.service.ReconciliationService
+import com.reckon.saga.service.AddMoneyService
+import com.reckon.saga.service.SagaRecoveryService
 import com.reckon.support.Fixtures
 import eu.rekawek.toxiproxy.model.ToxicDirection
 import org.junit.jupiter.api.AfterEach

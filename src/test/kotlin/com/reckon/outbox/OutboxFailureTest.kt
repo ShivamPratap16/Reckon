@@ -1,5 +1,7 @@
 package com.reckon.outbox
-
+import com.reckon.outbox.constant.EventType
+import com.reckon.outbox.repository.OutboxRepository
+import com.reckon.outbox.service.OutboxPublisher
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -1,5 +1,7 @@
 package com.reckon.consumer
-
+import com.reckon.consumer.model.PaymentEvent
+import com.reckon.consumer.service.NotificationsService
+import com.reckon.consumer.service.RewardsService
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test

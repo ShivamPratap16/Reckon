@@ -1,7 +1,7 @@
 package com.reckon.support
 
-import com.reckon.account.AccountRepository
-import com.reckon.auth.UserRepository
+import com.reckon.account.repository.AccountRepository
+import com.reckon.auth.repository.UserRepository
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
 import java.util.UUID

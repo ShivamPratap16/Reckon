@@ -1,5 +1,4 @@
 package com.reckon.consumer
-
 import com.reckon.support.Fixtures
 import com.reckon.support.KafkaPostgresTestBase
 import org.junit.jupiter.api.Test

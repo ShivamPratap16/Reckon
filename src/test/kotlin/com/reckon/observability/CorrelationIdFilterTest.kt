@@ -1,6 +1,6 @@
 package com.reckon.observability
 
-import com.reckon.platform.CORRELATION_ID_HEADER
+import com.reckon.platform.constant.CORRELATION_ID_HEADER
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

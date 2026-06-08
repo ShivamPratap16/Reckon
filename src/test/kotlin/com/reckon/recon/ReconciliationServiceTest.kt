@@ -1,9 +1,9 @@
 package com.reckon.recon
-
-import com.reckon.account.SystemAccounts
-import com.reckon.ledger.LedgerRepository
-import com.reckon.ledger.TxnType
-import com.reckon.saga.AddMoneyService
+import com.reckon.account.constant.SystemAccounts
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.repository.LedgerRepository
+import com.reckon.recon.service.ReconciliationService
+import com.reckon.saga.service.AddMoneyService
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test

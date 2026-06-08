@@ -1,7 +1,9 @@
 package com.reckon.ledger
 
-import com.reckon.auth.AuthRequest
-import com.reckon.auth.AuthResponse
+import com.reckon.auth.dto.request.AuthRequest
+import com.reckon.auth.dto.response.AuthResponse
+import com.reckon.ledger.dto.request.P2pRequest
+import com.reckon.ledger.dto.response.TransferResult
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
