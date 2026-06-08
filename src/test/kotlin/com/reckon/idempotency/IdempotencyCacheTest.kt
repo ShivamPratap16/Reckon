@@ -1,9 +1,9 @@
 package com.reckon.idempotency
 
-import com.reckon.ledger.LedgerService
-import com.reckon.ledger.TxnType
-import com.reckon.platform.ApiException
-import com.reckon.platform.RequestHash
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.service.LedgerService
+import com.reckon.platform.exception.ApiException
+import com.reckon.platform.util.RequestHash
 import com.reckon.support.Fixtures
 import com.reckon.support.RedisPostgresTestBase
 import org.junit.jupiter.api.Test

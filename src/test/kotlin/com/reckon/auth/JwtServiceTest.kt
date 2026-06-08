@@ -1,5 +1,6 @@
 package com.reckon.auth
 
+import com.reckon.auth.service.JwtService
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals

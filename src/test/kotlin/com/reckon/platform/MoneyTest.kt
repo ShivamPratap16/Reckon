@@ -1,5 +1,6 @@
 package com.reckon.platform
 
+import com.reckon.platform.model.Paisa
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals

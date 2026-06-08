@@ -1,9 +1,9 @@
 package com.reckon.chaos
 
-import com.reckon.ledger.LedgerRepository
-import com.reckon.ledger.LedgerService
-import com.reckon.ledger.TxnType
-import com.reckon.platform.RequestHash
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.repository.LedgerRepository
+import com.reckon.ledger.service.LedgerService
+import com.reckon.platform.util.RequestHash
 import com.reckon.support.Fixtures
 import eu.rekawek.toxiproxy.model.ToxicDirection
 import org.junit.jupiter.api.AfterEach

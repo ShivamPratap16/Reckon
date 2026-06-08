@@ -1,5 +1,7 @@
 package com.reckon.outbox
-
+import com.reckon.outbox.constant.EventType
+import com.reckon.outbox.repository.OutboxRepository
+import com.reckon.outbox.service.OutboxPublisher
 import com.reckon.support.KafkaPostgresTestBase
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.StringDeserializer

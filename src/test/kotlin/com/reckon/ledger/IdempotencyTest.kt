@@ -1,7 +1,9 @@
 package com.reckon.ledger
-
-import com.reckon.platform.ApiException
-import com.reckon.platform.RequestHash
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.repository.LedgerRepository
+import com.reckon.ledger.service.LedgerService
+import com.reckon.platform.exception.ApiException
+import com.reckon.platform.util.RequestHash
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test
@@ -76,7 +78,7 @@ class IdempotencyTest : PostgresTestBase() {
         val a = fixtures.walletWith(50000)
         val b = fixtures.walletWith(0)
         val initiator = java.util.UUID.randomUUID()
-        val hash = com.reckon.platform.RequestHash.of("P2P", a, b, 20000)
+        val hash = com.reckon.platform.util.RequestHash.of("P2P", a, b, 20000)
         val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
         val fresh = java.util.concurrent.atomic.AtomicInteger(0)
         val replayed = java.util.concurrent.atomic.AtomicInteger(0)

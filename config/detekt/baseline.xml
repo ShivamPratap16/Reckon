@@ -3,7 +3,6 @@
   <ManuallySuppressedIssues/>
   <CurrentIssues>
     <ID>EmptyCatchBlock:HoldConcurrencyTest.kt$HoldConcurrencyTest${}</ID>
-    <ID>MatchingDeclarationName:Money.kt$Paisa</ID>
     <ID>NestedBlockDepth:SagaRecoveryService.kt$SagaRecoveryService$fun recover(): Int</ID>
     <ID>SpreadOperator:ReckonApplication.kt$(*args)</ID>
     <ID>SwallowedException:AddMoneyService.kt$AddMoneyService$e: BankTimeoutException</ID>
@@ -28,8 +27,7 @@
     <ID>ThrowsCount:TransferController.kt$TransferController$@PostMapping("/p2p") fun p2p(@CurrentUser callerId: UUID?, @RequestBody req: P2pRequest): ResponseEntity&lt;TransferResult&gt;</ID>
     <ID>TooManyFunctions:LedgerRepository.kt$LedgerRepository</ID>
     <ID>UnusedParameter:SimulatedBank.kt$SimulatedBank$amountPaisa: Long</ID>
-    <ID>UnusedPrivateProperty:AddMoneyService.kt$AddMoneyService$private val accounts: AccountRepository</ID>
-    <ID>UseCheckOrError:Account.kt$AccountRepository$throw IllegalStateException("account not found: $id")</ID>
+    <ID>UseCheckOrError:AccountRepository.kt$AccountRepository$throw IllegalStateException("account not found: $id")</ID>
     <ID>UseCheckOrError:AuthorizationService.kt$AuthorizationService$throw IllegalStateException("hold $holdId no longer HELD")</ID>
     <ID>UseCheckOrError:AuthorizationService.kt$AuthorizationService$throw IllegalStateException("reservation missing for hold $holdId")</ID>
     <ID>UseCheckOrError:OptimisticTransferExecutor.kt$OptimisticTransferExecutor$throw IllegalStateException("not PENDING")</ID>

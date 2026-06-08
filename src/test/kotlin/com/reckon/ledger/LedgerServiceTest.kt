@@ -1,6 +1,9 @@
 package com.reckon.ledger
-
-import com.reckon.platform.ApiException
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.repository.LedgerRepository
+import com.reckon.ledger.service.LedgerService
+import com.reckon.ledger.service.TransferExecutor
+import com.reckon.platform.exception.ApiException
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test
@@ -69,7 +72,7 @@ class LedgerServiceTest : PostgresTestBase() {
         val a = fixtures.walletWith(100)
         val b = fixtures.walletWith(0)
         val idem = "no-entries-${java.util.UUID.randomUUID()}"
-        org.junit.jupiter.api.assertThrows<com.reckon.platform.ApiException> {
+        org.junit.jupiter.api.assertThrows<com.reckon.platform.exception.ApiException> {
             ledger.recordTransfer(TxnType.P2P, idem, "h", java.util.UUID.randomUUID(), a, b, 99999)
         }
         val entryCount = jdbc.queryForObject(

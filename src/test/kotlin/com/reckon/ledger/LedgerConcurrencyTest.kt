@@ -1,5 +1,7 @@
 package com.reckon.ledger
-
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.repository.LedgerRepository
+import com.reckon.ledger.service.LedgerService
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import org.junit.jupiter.api.Test
@@ -49,10 +51,10 @@ class LedgerConcurrencyTest : PostgresTestBase() {
 
         val successCount = ok.get()
         val insufficientFunds = allExceptions.count { (_, e) ->
-            e is com.reckon.platform.ApiException && e.code == "INSUFFICIENT_FUNDS"
+            e is com.reckon.platform.exception.ApiException && e.code == "INSUFFICIENT_FUNDS"
         }
         val unexpectedExceptions = allExceptions.filter { (_, e) ->
-            e !is com.reckon.platform.ApiException || (e as com.reckon.platform.ApiException).code != "INSUFFICIENT_FUNDS"
+            e !is com.reckon.platform.exception.ApiException || (e as com.reckon.platform.exception.ApiException).code != "INSUFFICIENT_FUNDS"
         }
 
         println("=== CONCURRENCY TEST SUMMARY ===")
@@ -111,7 +113,7 @@ class LedgerConcurrencyTest : PostgresTestBase() {
                 val (from, to) = if (i % 2 == 0) a to b else b to a // half A->B, half B->A
                 try {
                     ledger.recordTransfer(TxnType.P2P, "bidi-$i", "h$i", java.util.UUID.randomUUID(), from, to, 100)
-                } catch (e: com.reckon.platform.ApiException) {
+                } catch (e: com.reckon.platform.exception.ApiException) {
                     if (e.code != "INSUFFICIENT_FUNDS") errors.add("${e.code}: ${e.message}")
                 } catch (e: Exception) {
                     errors.add(e.javaClass.simpleName + ": " + e.message) // a deadlock would surface here

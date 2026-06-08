@@ -1,5 +1,6 @@
 package com.reckon.platform
 
+import com.reckon.platform.util.RequestHash
 import org.junit.jupiter.api.Test
 import java.util.UUID
 import kotlin.test.assertEquals

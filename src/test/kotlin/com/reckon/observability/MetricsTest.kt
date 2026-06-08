@@ -1,8 +1,8 @@
 package com.reckon.observability
 
-import com.reckon.ledger.LedgerService
-import com.reckon.ledger.TxnType
-import com.reckon.platform.RequestHash
+import com.reckon.ledger.enums.TxnType
+import com.reckon.ledger.service.LedgerService
+import com.reckon.platform.util.RequestHash
 import com.reckon.support.Fixtures
 import com.reckon.support.PostgresTestBase
 import io.micrometer.core.instrument.MeterRegistry
