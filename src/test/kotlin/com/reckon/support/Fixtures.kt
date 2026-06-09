@@ -1,6 +1,7 @@
 package com.reckon.support
 
 import com.reckon.account.repository.AccountRepository
+import com.reckon.auth.entity.User
 import com.reckon.auth.repository.UserRepository
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Component
@@ -10,8 +11,8 @@ import java.util.UUID
 class Fixtures(private val users: UserRepository, private val accounts: AccountRepository, private val jdbc: JdbcTemplate) {
     /** Create a user + wallet seeded with the given paisa balance. Returns wallet account id. */
     fun walletWith(balancePaisa: Long, email: String = "u${UUID.randomUUID()}@x.com"): UUID {
-        val u = users.create(email, "hash")
-        val w = accounts.createWallet(u.id)
+        val u = users.save(User(email = email, passwordHash = "hash"))
+        val w = accounts.createWallet(u.id!!)
         jdbc.update("UPDATE accounts SET balance=? WHERE id=?", balancePaisa, w.id)
         return w.id
     }

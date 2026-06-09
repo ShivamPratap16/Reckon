@@ -13,6 +13,10 @@ spring:
     password: ${DB_PASSWORD:reckon}
   flyway:
     enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: none        # Flyway owns the schema — Hibernate must never alter it
+    open-in-view: false
   data:
     redis:
       host: ${REDIS_HOST:localhost}
